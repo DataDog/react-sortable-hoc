@@ -1,3 +1,6 @@
+import find from 'lodash/find';
+import sortBy from 'lodash/sortBy';
+
 export default class Manager {
     refs = {};
 
@@ -22,9 +25,15 @@ export default class Manager {
     }
 
     getActive() {
-        return this.refs[this.active.collection].find(
-            // eslint-disable-next-line eqeqeq
-            ({ node }) => node.sortableInfo.index == this.active.index
+        if (!this.active) return null;
+        const activeRef = this.refs[this.active.collection];
+        if (!activeRef) return null;
+        return (
+            find(
+                activeRef,
+                // eslint-disable-next-line eqeqeq
+                ({ node }) => node.sortableInfo.index == this.active.index
+            ) || activeRef.slice(-1).pop()
         );
     }
 
@@ -33,21 +42,9 @@ export default class Manager {
     }
 
     getOrderedRefs(collection = this.active.collection) {
-        return this.refs[collection].sort(sortByIndex);
+        return sortBy(
+            this.refs[collection],
+            ({ node }) => node.sortableInfo.index
+        );
     }
-}
-
-function sortByIndex(
-    {
-        node: {
-            sortableInfo: { index: index1 }
-        }
-    },
-    {
-        node: {
-            sortableInfo: { index: index2 }
-        }
-    }
-) {
-    return index1 - index2;
 }

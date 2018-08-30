@@ -12,4 +12,6 @@ import _sortableHandle from './SortableHandle';
 export { _sortableHandle as sortableHandle };
 
 
-export { arrayMove } from './utils';
+export { arrayInsert, arrayMove } from './utils';
+import _DragLayer from './DragLayer';
+export { _DragLayer as DragLayer };

@@ -1,10 +1,20 @@
-"use strict";
+'use strict';
 
 Object.defineProperty(exports, "__esModule", {
     value: true
 });
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+var _find = require('lodash/find');
+
+var _find2 = _interopRequireDefault(_find);
+
+var _sortBy = require('lodash/sortBy');
+
+var _sortBy2 = _interopRequireDefault(_sortBy);
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
@@ -16,7 +26,7 @@ var Manager = function () {
     }
 
     _createClass(Manager, [{
-        key: "add",
+        key: 'add',
         value: function add(collection, ref) {
             if (!this.refs[collection]) {
                 this.refs[collection] = [];
@@ -25,7 +35,7 @@ var Manager = function () {
             this.refs[collection].push(ref);
         }
     }, {
-        key: "remove",
+        key: 'remove',
         value: function remove(collection, ref) {
             var index = this.getIndex(collection, ref);
 
@@ -34,33 +44,39 @@ var Manager = function () {
             }
         }
     }, {
-        key: "isActive",
+        key: 'isActive',
         value: function isActive() {
             return this.active;
         }
     }, {
-        key: "getActive",
+        key: 'getActive',
         value: function getActive() {
             var _this = this;
 
-            return this.refs[this.active.collection].find(
+            if (!this.active) return null;
+            var activeRef = this.refs[this.active.collection];
+            if (!activeRef) return null;
+            return (0, _find2.default)(activeRef,
             // eslint-disable-next-line eqeqeq
             function (_ref) {
                 var node = _ref.node;
                 return node.sortableInfo.index == _this.active.index;
-            });
+            }) || activeRef.slice(-1).pop();
         }
     }, {
-        key: "getIndex",
+        key: 'getIndex',
         value: function getIndex(collection, ref) {
             return this.refs[collection].indexOf(ref);
         }
     }, {
-        key: "getOrderedRefs",
+        key: 'getOrderedRefs',
         value: function getOrderedRefs() {
             var collection = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : this.active.collection;
 
-            return this.refs[collection].sort(sortByIndex);
+            return (0, _sortBy2.default)(this.refs[collection], function (_ref2) {
+                var node = _ref2.node;
+                return node.sortableInfo.index;
+            });
         }
     }]);
 
@@ -68,11 +84,3 @@ var Manager = function () {
 }();
 
 exports.default = Manager;
-
-
-function sortByIndex(_ref2, _ref3) {
-    var index1 = _ref2.node.sortableInfo.index;
-    var index2 = _ref3.node.sortableInfo.index;
-
-    return index1 - index2;
-}

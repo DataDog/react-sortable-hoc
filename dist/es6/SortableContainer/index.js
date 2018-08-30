@@ -1,6 +1,7 @@
 import _extends from 'babel-runtime/helpers/extends';
 import _slicedToArray from 'babel-runtime/helpers/slicedToArray';
 import _Promise from 'babel-runtime/core-js/promise';
+import _Object$keys from 'babel-runtime/core-js/object/keys';
 import _toConsumableArray from 'babel-runtime/helpers/toConsumableArray';
 import _Object$getPrototypeOf from 'babel-runtime/core-js/object/get-prototype-of';
 import _classCallCheck from 'babel-runtime/helpers/classCallCheck';
@@ -11,9 +12,11 @@ import React, { Component } from 'react';
 import PropTypes from 'prop-types';
 import { findDOMNode } from 'react-dom';
 import invariant from 'invariant';
-
+import findIndex from 'lodash/findIndex';
+import DragLayer from '../DragLayer';
 import Manager from '../Manager';
 import { closest, events, vendorPrefix, limit, getEdgeOffset, getElementMargin, getLockPixelOffset, getPosition, isTouchEvent, provideDisplayName, omit } from '../utils';
+import { closestRect } from '../DragLayer/utils';
 
 // Export Higher Order Sortable Container Component
 export default function sortableContainer(WrappedComponent) {
@@ -29,10 +32,27 @@ export default function sortableContainer(WrappedComponent) {
 
             var _this = _possibleConstructorReturn(this, (_class.__proto__ || _Object$getPrototypeOf(_class)).call(this, props));
 
+            _this.checkActiveIndex = function (nextProps) {
+                var _ref = nextProps || _this.props,
+                    items = _ref.items;
+
+                var item = _this.manager.active.item;
+
+                var newIndex = findIndex(items, item);
+                if (newIndex === -1) {
+                    _this.dragLayer.stopDrag();
+                    return;
+                }
+                _this.manager.active.index = newIndex;
+                _this.index = newIndex;
+            };
+
             _this.handleStart = function (event) {
+                var p = getPosition(event);
                 var _this$props = _this.props,
                     distance = _this$props.distance,
-                    shouldCancelStart = _this$props.shouldCancelStart;
+                    shouldCancelStart = _this$props.shouldCancelStart,
+                    items = _this$props.items;
 
 
                 if (event.button === 2 || shouldCancelStart(event)) {
@@ -40,7 +60,8 @@ export default function sortableContainer(WrappedComponent) {
                 }
 
                 _this._touched = true;
-                _this._pos = getPosition(event);
+                _this._pos = p;
+                // this._pos = getPosition(event);
 
                 var node = closest(event.target, function (el) {
                     return el.sortableInfo != null;
@@ -57,7 +78,7 @@ export default function sortableContainer(WrappedComponent) {
                         return el.sortableHandle != null;
                     })) return;
 
-                    _this.manager.active = { index: index, collection: collection };
+                    _this.manager.active = { index: index, collection: collection, item: items[index] };
 
                     /*
                     * Fixes a bug in Firefox where the :active state of anchor tags
@@ -88,7 +109,7 @@ export default function sortableContainer(WrappedComponent) {
                 var _this$props2 = _this.props,
                     distance = _this$props2.distance,
                     pressThreshold = _this$props2.pressThreshold;
-
+                // const p = getPosition(e);
 
                 if (!_this.state.sorting && _this._touched) {
                     var position = getPosition(event);
@@ -126,39 +147,28 @@ export default function sortableContainer(WrappedComponent) {
             };
 
             _this.handlePress = function (event) {
-                var active = _this.manager.getActive();
+                var active = null;
+                if (_this.dragLayer.helper) {
+                    if (_this.manager.active) {
+                        _this.checkActiveIndex();
+                        active = _this.manager.getActive();
+                    }
+                } else {
+                    active = _this.dragLayer.startDrag(_this.document.body, _this, event);
+                }
 
                 if (active) {
                     var _this$props3 = _this.props,
                         axis = _this$props3.axis,
-                        getHelperDimensions = _this$props3.getHelperDimensions,
                         helperClass = _this$props3.helperClass,
                         hideSortableGhost = _this$props3.hideSortableGhost,
-                        onSortStart = _this$props3.onSortStart,
-                        useWindowAsScrollContainer = _this$props3.useWindowAsScrollContainer;
-                    var node = active.node,
-                        collection = active.collection;
+                        onSortStart = _this$props3.onSortStart;
+                    var _active = active,
+                        node = _active.node,
+                        collection = _active.collection;
                     var index = node.sortableInfo.index;
 
-                    var margin = getElementMargin(node);
 
-                    var containerBoundingRect = _this.container.getBoundingClientRect();
-                    var dimensions = getHelperDimensions({
-                        index: index,
-                        node: node,
-                        collection: collection
-                    });
-
-                    _this.node = node;
-                    _this.margin = margin;
-                    _this.width = dimensions.width;
-                    _this.height = dimensions.height;
-                    _this.marginOffset = {
-                        x: _this.margin.left + _this.margin.right,
-                        y: Math.max(_this.margin.top, _this.margin.bottom)
-                    };
-                    _this.boundingClientRect = node.getBoundingClientRect();
-                    _this.containerBoundingRect = containerBoundingRect;
                     _this.index = index;
                     _this.newIndex = index;
 
@@ -166,42 +176,16 @@ export default function sortableContainer(WrappedComponent) {
                         x: axis.indexOf('x') >= 0,
                         y: axis.indexOf('y') >= 0
                     };
-                    _this.offsetEdge = getEdgeOffset(node, _this.container);
-                    _this.initialOffset = getPosition(event);
+
                     _this.initialScroll = {
-                        top: _this.container.scrollTop,
-                        left: _this.container.scrollLeft
+                        top: _this.scrollContainer.scrollTop,
+                        left: _this.scrollContainer.scrollLeft
                     };
 
                     _this.initialWindowScroll = {
-                        top: window.pageYOffset,
-                        left: window.pageXOffset
+                        top: window.scrollY,
+                        left: window.scrollX
                     };
-
-                    var fields = node.querySelectorAll('input, textarea, select, canvas');
-                    var clonedNode = node.cloneNode(true);
-                    var clonedFields = [].concat(_toConsumableArray(clonedNode.querySelectorAll('input, textarea, select, canvas'))); // Convert NodeList to Array
-
-                    clonedFields.forEach(function (field, index) {
-                        if (field.tagName === 'CANVAS') {
-                            if (fields[index].tagName === 'CANVAS') {
-                                var destCtx = field.getContext('2d');
-                                destCtx.drawImage(fields[index], 0, 0);
-                            }
-                        } else if (field.type !== 'file' && fields[index]) {
-                            field.value = fields[index].value;
-                        }
-                    });
-
-                    _this.helper = _this.document.body.appendChild(clonedNode);
-
-                    _this.helper.style.position = 'fixed';
-                    _this.helper.style.top = _this.boundingClientRect.top - margin.top + 'px';
-                    _this.helper.style.left = _this.boundingClientRect.left - margin.left + 'px';
-                    _this.helper.style.width = _this.width + 'px';
-                    _this.helper.style.height = _this.height + 'px';
-                    _this.helper.style.boxSizing = 'border-box';
-                    _this.helper.style.pointerEvents = 'none';
 
                     if (hideSortableGhost) {
                         _this.sortableGhost = node;
@@ -209,30 +193,11 @@ export default function sortableContainer(WrappedComponent) {
                         node.style.opacity = 0;
                     }
 
-                    _this.minTranslate = {};
-                    _this.maxTranslate = {};
-                    if (_this.axis.x) {
-                        _this.minTranslate.x = (useWindowAsScrollContainer ? 0 : containerBoundingRect.left) - _this.boundingClientRect.left - _this.width / 2;
-                        _this.maxTranslate.x = (useWindowAsScrollContainer ? _this.contentWindow.innerWidth : containerBoundingRect.left + containerBoundingRect.width) - _this.boundingClientRect.left - _this.width / 2;
-                    }
-                    if (_this.axis.y) {
-                        _this.minTranslate.y = (useWindowAsScrollContainer ? 0 : containerBoundingRect.top) - _this.boundingClientRect.top - _this.height / 2;
-                        _this.maxTranslate.y = (useWindowAsScrollContainer ? _this.contentWindow.innerHeight : containerBoundingRect.top + containerBoundingRect.height) - _this.boundingClientRect.top - _this.height / 2;
-                    }
-
                     if (helperClass) {
-                        var _this$helper$classLis;
+                        var _this$dragLayer$helpe;
 
-                        (_this$helper$classLis = _this.helper.classList).add.apply(_this$helper$classLis, _toConsumableArray(helperClass.split(' ')));
+                        (_this$dragLayer$helpe = _this.dragLayer.helper.classList).add.apply(_this$dragLayer$helpe, _toConsumableArray(helperClass.split(' ')));
                     }
-
-                    _this.listenerNode = event.touches ? node : _this.contentWindow;
-                    events.move.forEach(function (eventName) {
-                        return _this.listenerNode.addEventListener(eventName, _this.handleSortMove, false);
-                    });
-                    events.end.forEach(function (eventName) {
-                        return _this.listenerNode.addEventListener(eventName, _this.handleSortEnd, false);
-                    });
 
                     _this.setState({
                         sorting: true,
@@ -250,9 +215,11 @@ export default function sortableContainer(WrappedComponent) {
 
                 event.preventDefault(); // Prevent scrolling on mobile
 
-                _this.updatePosition(event);
-                _this.animateNodes();
-                _this.autoscroll();
+                // animate nodes if required
+                if (_this.checkActive(event)) {
+                    _this.animateNodes();
+                    _this.autoscroll();
+                }
 
                 if (onSortMove) {
                     onSortMove(event);
@@ -260,24 +227,35 @@ export default function sortableContainer(WrappedComponent) {
             };
 
             _this.handleSortEnd = function (event) {
+                var newList = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : null;
                 var _this$props4 = _this.props,
                     hideSortableGhost = _this$props4.hideSortableGhost,
                     onSortEnd = _this$props4.onSortEnd;
+
+                if (!_this.manager.active) {
+                    console.warn('there is no active node', event);
+                    return;
+                }
                 var collection = _this.manager.active.collection;
 
-                // Remove the event listeners if the node is still in the DOM
+                // // Remove the event listeners if the node is still in the DOM
+                // if (this.listenerNode) {
+                //     events.move.forEach(eventName =>
+                //         this.listenerNode.removeEventListener(
+                //             eventName,
+                //             this.handleSortMove
+                //         )
+                //     );
+                //     events.end.forEach(eventName =>
+                //         this.listenerNode.removeEventListener(
+                //             eventName,
+                //             this.handleSortEnd
+                //         )
+                //     );
+                // }
 
-                if (_this.listenerNode) {
-                    events.move.forEach(function (eventName) {
-                        return _this.listenerNode.removeEventListener(eventName, _this.handleSortMove);
-                    });
-                    events.end.forEach(function (eventName) {
-                        return _this.listenerNode.removeEventListener(eventName, _this.handleSortEnd);
-                    });
-                }
-
-                // Remove the helper from the DOM
-                _this.helper.parentNode.removeChild(_this.helper);
+                // // Remove the helper from the DOM
+                // this.helper.parentNode.removeChild(this.helper);
 
                 if (hideSortableGhost && _this.sortableGhost) {
                     _this.sortableGhost.style.visibility = '';
@@ -310,6 +288,11 @@ export default function sortableContainer(WrappedComponent) {
                 });
 
                 if (typeof onSortEnd === 'function') {
+                    // get the index in the new list
+                    if (newList) {
+                        _this.newIndex = newList.getClosestNode(event).index;
+                    }
+
                     onSortEnd({
                         oldIndex: _this.index,
                         newIndex: _this.newIndex,
@@ -320,8 +303,86 @@ export default function sortableContainer(WrappedComponent) {
                 _this._touched = false;
             };
 
+            _this.handleSortSwap = function (index, item) {
+                var onSortSwap = _this.props.onSortSwap;
+
+                if (typeof onSortSwap === 'function') {
+                    onSortSwap({
+                        index: index,
+                        item: item
+                    });
+                }
+            };
+
+            _this.getClosestNode = function (e) {
+                var p = getPosition(e);
+                // eslint-disable-next-line
+                var closestNodes = [];
+                // eslint-disable-next-line
+                var closestCollections = [];
+                //TODO: keys is converting number to string!!! check origin value type as number???
+                _Object$keys(_this.manager.refs).forEach(function (collection) {
+                    var nodes = _this.manager.refs[collection].map(function (n) {
+                        return n.node;
+                    });
+                    if (nodes && nodes.length > 0) {
+                        closestNodes.push(nodes[closestRect(p.x, p.y, nodes)]);
+                        closestCollections.push(collection);
+                    }
+                });
+                var index = closestRect(p.x, p.y, closestNodes);
+                var collection = closestCollections[index];
+                if (collection === undefined) {
+                    return {
+                        collection: collection,
+                        index: 0
+                    };
+                }
+                var finalNodes = _this.manager.refs[collection].map(function (n) {
+                    return n.node;
+                });
+                var finalIndex = finalNodes.indexOf(closestNodes[index]);
+                var node = closestNodes[index];
+                //TODO: add better support for grid
+                var rect = node.getBoundingClientRect();
+                return {
+                    collection: collection,
+                    index: finalIndex + (p.y > rect.bottom ? 1 : 0)
+                };
+            };
+
+            _this.checkActive = function (e) {
+                var active = _this.manager.active;
+                if (!active) {
+                    // find closest collection
+                    var node = closest(e.target, function (el) {
+                        return el.sortableInfo != null;
+                    });
+                    if (node && node.sortableInfo) {
+                        var p = getPosition(e);
+                        var collection = node.sortableInfo.collection;
+
+                        var nodes = _this.manager.refs[collection].map(function (n) {
+                            return n.node;
+                        });
+                        // find closest index in collection
+                        if (nodes) {
+                            var index = closestRect(p.x, p.y, nodes);
+                            _this.manager.active = {
+                                index: index,
+                                collection: collection,
+                                item: _this.props.items[index]
+                            };
+                            _this.handlePress(e);
+                        }
+                    }
+                    return false;
+                }
+                return true;
+            };
+
             _this.autoscroll = function () {
-                var translate = _this.translate;
+                var translate = _this.dragLayer.translate;
                 var direction = {
                     x: 0,
                     y: 0
@@ -335,18 +396,18 @@ export default function sortableContainer(WrappedComponent) {
                     y: 10
                 };
 
-                if (translate.y >= _this.maxTranslate.y - _this.height / 2) {
+                if (translate.y >= _this.dragLayer.maxTranslate.y - _this.dragLayer.height / 2) {
                     direction.y = 1; // Scroll Down
-                    speed.y = acceleration.y * Math.abs((_this.maxTranslate.y - _this.height / 2 - translate.y) / _this.height);
-                } else if (translate.x >= _this.maxTranslate.x - _this.width / 2) {
+                    speed.y = acceleration.y * Math.abs((_this.dragLayer.maxTranslate.y - _this.dragLayer.height / 2 - translate.y) / _this.dragLayer.height);
+                } else if (translate.x >= _this.dragLayer.maxTranslate.x - _this.dragLayer.width / 2) {
                     direction.x = 1; // Scroll Right
-                    speed.x = acceleration.x * Math.abs((_this.maxTranslate.x - _this.width / 2 - translate.x) / _this.width);
-                } else if (translate.y <= _this.minTranslate.y + _this.height / 2) {
+                    speed.x = acceleration.x * Math.abs((_this.dragLayer.maxTranslate.x - _this.dragLayer.width / 2 - translate.x) / _this.dragLayer.width);
+                } else if (translate.y <= _this.dragLayer.minTranslate.y + _this.dragLayer.height / 2) {
                     direction.y = -1; // Scroll Up
-                    speed.y = acceleration.y * Math.abs((translate.y - _this.height / 2 - _this.minTranslate.y) / _this.height);
-                } else if (translate.x <= _this.minTranslate.x + _this.width / 2) {
+                    speed.y = acceleration.y * Math.abs((translate.y - _this.dragLayer.height / 2 - _this.dragLayer.minTranslate.y) / _this.dragLayer.height);
+                } else if (translate.x <= _this.dragLayer.minTranslate.x + _this.dragLayer.width / 2) {
                     direction.x = -1; // Scroll Left
-                    speed.x = acceleration.x * Math.abs((translate.x - _this.width / 2 - _this.minTranslate.x) / _this.width);
+                    speed.x = acceleration.x * Math.abs((translate.x - _this.dragLayer.width / 2 - _this.dragLayer.minTranslate.x) / _this.dragLayer.width);
                 }
 
                 if (_this.autoscrollInterval) {
@@ -364,13 +425,16 @@ export default function sortableContainer(WrappedComponent) {
                         };
                         _this.scrollContainer.scrollTop += offset.top;
                         _this.scrollContainer.scrollLeft += offset.left;
-                        _this.translate.x += offset.left;
-                        _this.translate.y += offset.top;
+                        _this.dragLayer.translate.x += offset.left;
+                        _this.dragLayer.translate.y += offset.top;
                         _this.animateNodes();
                     }, 5);
                 }
             };
 
+            _this.dragLayer = props.dragLayer || new DragLayer();
+            _this.dragLayer.addRef(_this);
+            _this.dragLayer.onDragEnd = props.onDragEnd;
             _this.manager = new Manager();
             _this.events = {
                 start: _this.handleStart,
@@ -391,12 +455,17 @@ export default function sortableContainer(WrappedComponent) {
                     manager: this.manager
                 };
             }
+
+            // NOTE: bad merge possible here
+
         }, {
             key: 'componentDidMount',
             value: function componentDidMount() {
                 var _this2 = this;
 
-                var useWindowAsScrollContainer = this.props.useWindowAsScrollContainer;
+                var _props = this.props,
+                    contentWindow = _props.contentWindow,
+                    useWindowAsScrollContainer = _props.useWindowAsScrollContainer;
 
                 /*
                 *  Set our own default rather than using defaultProps because Jest
@@ -410,10 +479,12 @@ export default function sortableContainer(WrappedComponent) {
                     _this2.container = containerNode;
                     _this2.document = _this2.container.ownerDocument || document;
 
-                    var contentWindow = _this2.props.contentWindow || _this2.document.defaultView || window;
-
                     _this2.contentWindow = typeof contentWindow === 'function' ? contentWindow() : contentWindow;
                     _this2.scrollContainer = useWindowAsScrollContainer ? _this2.document.scrollingElement || _this2.document.documentElement : _this2.container;
+                    _this2.initialScroll = {
+                        top: _this2.scrollContainer.scrollTop,
+                        left: _this2.scrollContainer.scrollLeft
+                    };
 
                     var _loop = function _loop(key) {
                         if (_this2.events.hasOwnProperty(key)) {
@@ -433,6 +504,7 @@ export default function sortableContainer(WrappedComponent) {
             value: function componentWillUnmount() {
                 var _this3 = this;
 
+                this.dragLayer.removeRef(this);
                 if (this.container) {
                     var _loop2 = function _loop2(key) {
                         if (_this3.events.hasOwnProperty(key)) {
@@ -448,11 +520,27 @@ export default function sortableContainer(WrappedComponent) {
                 }
             }
         }, {
+            key: 'componentWillReceiveProps',
+            value: function componentWillReceiveProps(nextProps) {
+                var active = this.manager.active;
+
+                if (!active) return;
+                this.checkActiveIndex(nextProps);
+            }
+
+            // NOTE: Bad merge possible
+
+
+            // NOTE: Bad merge possible here
+
+        }, {
             key: 'getLockPixelOffsets',
             value: function getLockPixelOffsets() {
-                var width = this.width,
-                    height = this.height;
+                var _dragLayer = this.dragLayer,
+                    width = _dragLayer.width,
+                    height = _dragLayer.height;
                 var lockOffset = this.props.lockOffset;
+
 
                 var offsets = Array.isArray(lockOffset) ? lockOffset : [lockOffset, lockOffset];
 
@@ -463,82 +551,39 @@ export default function sortableContainer(WrappedComponent) {
                     maxLockOffset = _offsets[1];
 
                 return [getLockPixelOffset({
-                    lockOffset: minLockOffset,
+                    offset: minLockOffset,
                     width: width,
                     height: height
-                }), getLockPixelOffset({ lockOffset: maxLockOffset, width: width, height: height })];
-            }
-        }, {
-            key: 'updatePosition',
-            value: function updatePosition(event) {
-                var _props = this.props,
-                    lockAxis = _props.lockAxis,
-                    lockToContainerEdges = _props.lockToContainerEdges;
-
-
-                var offset = getPosition(event);
-                var translate = {
-                    x: offset.x - this.initialOffset.x,
-                    y: offset.y - this.initialOffset.y
-                };
-
-                // Adjust for window scroll
-                translate.y -= window.pageYOffset - this.initialWindowScroll.top;
-                translate.x -= window.pageXOffset - this.initialWindowScroll.left;
-
-                this.translate = translate;
-
-                if (lockToContainerEdges) {
-                    var _getLockPixelOffsets = this.getLockPixelOffsets(),
-                        _getLockPixelOffsets2 = _slicedToArray(_getLockPixelOffsets, 2),
-                        minLockOffset = _getLockPixelOffsets2[0],
-                        maxLockOffset = _getLockPixelOffsets2[1];
-
-                    var minOffset = {
-                        x: this.width / 2 - minLockOffset.x,
-                        y: this.height / 2 - minLockOffset.y
-                    };
-                    var maxOffset = {
-                        x: this.width / 2 - maxLockOffset.x,
-                        y: this.height / 2 - maxLockOffset.y
-                    };
-
-                    translate.x = limit(this.minTranslate.x + minOffset.x, this.maxTranslate.x - maxOffset.x, translate.x);
-                    translate.y = limit(this.minTranslate.y + minOffset.y, this.maxTranslate.y - maxOffset.y, translate.y);
-                }
-
-                if (lockAxis === 'x') {
-                    translate.y = 0;
-                } else if (lockAxis === 'y') {
-                    translate.x = 0;
-                }
-
-                this.helper.style[vendorPrefix + 'Transform'] = 'translate3d(' + translate.x + 'px,' + translate.y + 'px, 0)';
+                }), getLockPixelOffset({
+                    offset: maxLockOffset,
+                    width: width,
+                    height: height
+                })];
             }
         }, {
             key: 'animateNodes',
             value: function animateNodes() {
+                if (!this.axis) return;
                 var _props2 = this.props,
                     transitionDuration = _props2.transitionDuration,
                     hideSortableGhost = _props2.hideSortableGhost,
                     onSortOver = _props2.onSortOver;
 
                 var nodes = this.manager.getOrderedRefs();
-                var containerScrollDelta = {
-                    left: this.container.scrollLeft - this.initialScroll.left,
-                    top: this.container.scrollTop - this.initialScroll.top
+                var deltaScroll = {
+                    left: this.scrollContainer.scrollLeft - this.initialScroll.left,
+                    top: this.scrollContainer.scrollTop - this.initialScroll.top
                 };
                 var sortingOffset = {
-                    left: this.offsetEdge.left + this.translate.x + containerScrollDelta.left,
-                    top: this.offsetEdge.top + this.translate.y + containerScrollDelta.top
+                    left: this.dragLayer.offsetEdge.left - this.dragLayer.distanceBetweenContainers.x + this.dragLayer.translate.x + deltaScroll.left,
+                    top: this.dragLayer.offsetEdge.top - this.dragLayer.distanceBetweenContainers.y + this.dragLayer.translate.y + deltaScroll.top
                 };
                 var windowScrollDelta = {
-                    top: window.pageYOffset - this.initialWindowScroll.top,
-                    left: window.pageXOffset - this.initialWindowScroll.left
+                    top: window.scrollY - this.initialWindowScroll.top,
+                    left: window.scrollX - this.initialWindowScroll.left
                 };
                 var prevIndex = this.newIndex;
                 this.newIndex = null;
-
                 for (var i = 0, len = nodes.length; i < len; i++) {
                     var node = nodes[i].node;
 
@@ -546,8 +591,8 @@ export default function sortableContainer(WrappedComponent) {
                     var width = node.offsetWidth;
                     var height = node.offsetHeight;
                     var offset = {
-                        width: this.width > width ? width / 2 : this.width / 2,
-                        height: this.height > height ? height / 2 : this.height / 2
+                        width: this.dragLayer.width > width ? width / 2 : this.dragLayer.width / 2,
+                        height: this.dragLayer.height > height ? height / 2 : this.dragLayer.height / 2
                     };
 
                     var translate = {
@@ -597,8 +642,8 @@ export default function sortableContainer(WrappedComponent) {
                             if (index < this.index && (sortingOffset.left + windowScrollDelta.left - offset.width <= edgeOffset.left && sortingOffset.top + windowScrollDelta.top <= edgeOffset.top + offset.height || sortingOffset.top + windowScrollDelta.top + offset.height <= edgeOffset.top)) {
                                 // If the current node is to the left on the same row, or above the node that's being dragged
                                 // then move it to the right
-                                translate.x = this.width + this.marginOffset.x;
-                                if (edgeOffset.left + translate.x > this.containerBoundingRect.width - offset.width) {
+                                translate.x = this.dragLayer.width + this.dragLayer.marginOffset.x;
+                                if (edgeOffset.left + translate.x > this.dragLayer.containerBoundingRect.width - offset.width) {
                                     // If it moves passed the right bounds, then animate it to the first position of the next row.
                                     // We just use the offset of the next node to calculate where to move, because that node's original position
                                     // is exactly where we want to go
@@ -611,8 +656,8 @@ export default function sortableContainer(WrappedComponent) {
                             } else if (index > this.index && (sortingOffset.left + windowScrollDelta.left + offset.width >= edgeOffset.left && sortingOffset.top + windowScrollDelta.top + offset.height >= edgeOffset.top || sortingOffset.top + windowScrollDelta.top + offset.height >= edgeOffset.top + height)) {
                                 // If the current node is to the right on the same row, or below the node that's being dragged
                                 // then move it to the left
-                                translate.x = -(this.width + this.marginOffset.x);
-                                if (edgeOffset.left + translate.x < this.containerBoundingRect.left + offset.width) {
+                                translate.x = -(this.dragLayer.width + this.dragLayer.marginOffset.x);
+                                if (edgeOffset.left + translate.x < this.dragLayer.containerBoundingRect.left + offset.width) {
                                     // If it moves passed the left bounds, then animate it to the last position of the previous row.
                                     // We just use the offset of the previous node to calculate where to move, because that node's original position
                                     // is exactly where we want to go
@@ -623,10 +668,10 @@ export default function sortableContainer(WrappedComponent) {
                             }
                         } else {
                             if (index > this.index && sortingOffset.left + windowScrollDelta.left + offset.width >= edgeOffset.left) {
-                                translate.x = -(this.width + this.marginOffset.x);
+                                translate.x = -(this.dragLayer.width + this.dragLayer.marginOffset.x);
                                 this.newIndex = index;
                             } else if (index < this.index && sortingOffset.left + windowScrollDelta.left <= edgeOffset.left + offset.width) {
-                                translate.x = this.width + this.marginOffset.x;
+                                translate.x = this.dragLayer.width + this.dragLayer.marginOffset.x;
                                 if (this.newIndex == null) {
                                     this.newIndex = index;
                                 }
@@ -634,10 +679,10 @@ export default function sortableContainer(WrappedComponent) {
                         }
                     } else if (this.axis.y) {
                         if (index > this.index && sortingOffset.top + windowScrollDelta.top + offset.height >= edgeOffset.top) {
-                            translate.y = -(this.height + this.marginOffset.y);
+                            translate.y = -(this.dragLayer.height + this.dragLayer.marginOffset.y);
                             this.newIndex = index;
                         } else if (index < this.index && sortingOffset.top + windowScrollDelta.top <= edgeOffset.top + offset.height) {
-                            translate.y = this.height + this.marginOffset.y;
+                            translate.y = this.dragLayer.height + this.dragLayer.marginOffset.y;
                             if (this.newIndex == null) {
                                 this.newIndex = index;
                             }
@@ -685,7 +730,7 @@ export default function sortableContainer(WrappedComponent) {
 
                 return React.createElement(WrappedComponent, _extends({
                     ref: ref
-                }, omit(this.props, 'contentWindow', 'useWindowAsScrollContainer', 'distance', 'helperClass', 'hideSortableGhost', 'transitionDuration', 'useDragHandle', 'pressDelay', 'pressThreshold', 'shouldCancelStart', 'onSortStart', 'onSortMove', 'onSortEnd', 'axis', 'lockAxis', 'lockOffset', 'lockToContainerEdges', 'getContainer', 'getHelperDimensions')));
+                }, omit(this.props, 'contentWindow', 'useWindowAsScrollContainer', 'distance', 'helperClass', 'hideSortableGhost', 'transitionDuration', 'useDragHandle', 'pressDelay', 'pressThreshold', 'shouldCancelStart', 'onSortStart', 'onSortMove', 'onSortSwap', 'onSortEnd', 'axis', 'lockAxis', 'lockOffset', 'lockToContainerEdges', 'getContainer', 'getHelperDimensions')));
             }
         }]);
 
@@ -698,6 +743,7 @@ export default function sortableContainer(WrappedComponent) {
         distance: 0,
         useWindowAsScrollContainer: false,
         hideSortableGhost: true,
+        contentWindow: typeof window !== 'undefined' ? window : null,
         shouldCancelStart: function shouldCancelStart(e) {
             // Cancel sorting if the event target is an `input`, `textarea`, `select` or `option`
             var disabledElements = ['input', 'textarea', 'select', 'option', 'button'];
@@ -708,8 +754,8 @@ export default function sortableContainer(WrappedComponent) {
         },
         lockToContainerEdges: false,
         lockOffset: '50%',
-        getHelperDimensions: function getHelperDimensions(_ref) {
-            var node = _ref.node;
+        getHelperDimensions: function getHelperDimensions(_ref2) {
+            var node = _ref2.node;
             return {
                 width: node.offsetWidth,
                 height: node.offsetHeight
@@ -718,6 +764,7 @@ export default function sortableContainer(WrappedComponent) {
     }, _class.propTypes = {
         axis: PropTypes.oneOf(['x', 'y', 'xy']),
         distance: PropTypes.number,
+        dragLayer: PropTypes.object,
         lockAxis: PropTypes.string,
         helperClass: PropTypes.string,
         transitionDuration: PropTypes.number,
@@ -726,6 +773,7 @@ export default function sortableContainer(WrappedComponent) {
         onSortMove: PropTypes.func,
         onSortOver: PropTypes.func,
         onSortEnd: PropTypes.func,
+        onDragEnd: PropTypes.func,
         shouldCancelStart: PropTypes.func,
         pressDelay: PropTypes.number,
         useDragHandle: PropTypes.bool,

@@ -1,21 +1,21 @@
 {
-  "extends": "react-app",
-  "rules": {
-    "prefer-const": ["error"],
-    "comma-dangle": ["error", "always-multiline"],
-    "indent": ["error", 2, {"SwitchCase": 1}],
-    "semi": ["error", "always"],
-    "no-mixed-operators": [
-      "warn",
-      {
-        "groups": [
-          ['&', '|', '^', '~', '<<', '>>', '>>>'],
-          ['==', '!=', '===', '!==', '>', '>=', '<', '<='],
-          ['in', 'instanceof']
+    "extends": "react-app",
+    "rules": {
+        "prefer-const": ["error"],
+        "comma-dangle": ["error", "never"],
+        "indent": ["error", 4, { "SwitchCase": 1 }],
+        "semi": ["error", "always"],
+        "no-mixed-operators": [
+            "warn",
+            {
+                "groups": [
+                    ["&", "|", "^", "~", "<<", ">>", ">>>"],
+                    ["==", "!=", "===", "!==", ">", ">=", "<", "<="],
+                    ["in", "instanceof"]
+                ],
+                "allowSamePrecedence": true
+            }
         ],
-        "allowSamePrecedence": true
-      }
-    ],
-    "quotes": ["error", "single"]
-  }
+        "quotes": ["error", "single"]
+    }
 }

@@ -2,13 +2,23 @@ import invariant from 'invariant';
 
 export function arrayMove(arr, previousIndex, newIndex) {
     const array = arr.slice(0);
-    if (newIndex >= array.length) {
-        let k = newIndex - array.length;
-        while (k-- + 1) {
-            array.push(undefined);
+    if (newIndex === -1) {
+        array.splice(previousIndex, 1);
+    } else {
+        if (newIndex >= array.length) {
+            let k = newIndex - array.length;
+            while (k-- + 1) {
+                array.push(undefined);
+            }
         }
+        array.splice(newIndex, 0, array.splice(previousIndex, 1)[0]);
     }
-    array.splice(newIndex, 0, array.splice(previousIndex, 1)[0]);
+    return array;
+}
+
+export function arrayInsert(arr, index, item) {
+    const array = arr.slice(0);
+    array.splice(index, 0, item);
     return array;
 }
 
@@ -68,6 +78,16 @@ export function limit(min, max, value) {
     return value;
 }
 
+export function clamp(value, min, max) {
+    if (value < min) {
+        return min;
+    }
+    if (value > max) {
+        return max;
+    }
+    return value;
+}
+
 function getCSSPixelValue(stringValue) {
     if (stringValue.substr(-2) === 'px') {
         return parseFloat(stringValue);
@@ -96,17 +116,23 @@ export function getPosition(event) {
     if (event.touches && event.touches.length) {
         return {
             x: event.touches[0].pageX,
-            y: event.touches[0].pageY
+            y: event.touches[0].pageY,
+            pageX: event.pageX,
+            pageY: event.pageY
         };
     } else if (event.changedTouches && event.changedTouches.length) {
         return {
             x: event.changedTouches[0].pageX,
-            y: event.changedTouches[0].pageY
+            y: event.changedTouches[0].pageY,
+            pageX: event.pageX,
+            pageY: event.pageY
         };
     } else {
         return {
             x: event.pageX,
-            y: event.pageY
+            y: event.pageY,
+            pageX: event.pageX,
+            pageY: event.pageY
         };
     }
 }
