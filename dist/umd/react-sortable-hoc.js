@@ -1464,6 +1464,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	                    onSortEnd({
 	                        oldIndex: _this.index,
 	                        newIndex: _this.newIndex,
+	                        newList: newList,
 	                        collection: collection
 	                    }, event);
 	                }

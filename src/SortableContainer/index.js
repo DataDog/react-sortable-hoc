@@ -458,6 +458,7 @@ export default function sortableContainer(
                     {
                         oldIndex: this.index,
                         newIndex: this.newIndex,
+                        newList,
                         collection
                     },
                     event
