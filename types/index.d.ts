@@ -24,6 +24,11 @@ export interface SortEnd {
     collection: Offset;
 }
 
+export interface SortSwap {
+    item: any;
+    index: number;
+}
+
 export type SortEvent = React.MouseEvent<any> | React.TouchEvent<any>;
 
 export type SortEventWithTag = SortEvent & {
@@ -39,6 +44,8 @@ export type SortMoveHandler = (event: SortEvent) => void;
 export type SortEndHandler = (sort: SortEnd, event: SortEvent) => void;
 
 export type SortOverHandler = (sort: SortOver, event: SortEvent) => void;
+
+export type SortSwapHandler = (sort: SortSwap) => void;
 
 export type ContainerGetter = (
     element: React.ReactElement<any>
@@ -57,12 +64,14 @@ export interface SortableContainerProps {
     pressDelay?: number;
     pressThreshold?: number;
     distance?: number;
+    items?: any;
     shouldCancelStart?: (event: SortEvent | SortEventWithTag) => boolean;
     onSortStart?: SortStartHandler;
     onSortMove?: SortMoveHandler;
     onSortEnd?: SortEndHandler;
     onSortOver?: SortOverHandler;
-    onSortSwap?: any;
+    onSortSwap?: SortSwapHandler;
+    dragLayer?: any;
     useDragHandle?: boolean;
     useWindowAsScrollContainer?: boolean;
     hideSortableGhost?: boolean;
@@ -72,6 +81,17 @@ export interface SortableContainerProps {
     getHelperDimensions?: (sort: SortStart) => Dimensions;
 }
 
+export class DragLayer {
+    addRef: any;
+    removeRef: any;
+    setTranslateBoundaries: any;
+    startDrag: any;
+    stopDrag: any;
+    handleSortMove: any;
+    handleSortEnd: any;
+    updatePosition: any;
+    updateTargetContainer: any;
+}
 export interface SortableElementProps {
     index: number;
     collection?: Offset;
@@ -108,3 +128,5 @@ export function arrayMove<T>(
     previousIndex: number,
     newIndex: number
 ): T[];
+
+export function arrayInsert<T>(collection: T[], index: number, item: any): T[];
