@@ -3,7 +3,7 @@ import PropTypes from 'prop-types';
 import { findDOMNode } from 'react-dom';
 import invariant from 'invariant';
 import findIndex from 'lodash/findIndex';
-import { isObject } from 'lodash/isObject';
+import isObject from 'lodash/isObject';
 import DragLayer from '../DragLayer';
 import Manager from '../Manager';
 import {
