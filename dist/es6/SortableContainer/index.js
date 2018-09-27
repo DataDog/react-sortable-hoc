@@ -13,7 +13,7 @@ import PropTypes from 'prop-types';
 import { findDOMNode } from 'react-dom';
 import invariant from 'invariant';
 import findIndex from 'lodash/findIndex';
-import { isObject } from 'lodash/isObject';
+import isPlainObject from 'lodash/isPlainObject';
 import DragLayer from '../DragLayer';
 import Manager from '../Manager';
 import { closest, events, vendorPrefix, limit, getEdgeOffset, getElementMargin, getLockPixelOffset, getPosition, isTouchEvent, provideDisplayName, omit } from '../utils';
@@ -42,7 +42,7 @@ export default function sortableContainer(WrappedComponent) {
                 // If sortable item is an object, find item that match id
                 // Otherwise let findIndex predicate on item
 
-                var newIndex = isObject(item) ? findIndex(items, function (obj) {
+                var newIndex = isPlainObject(item) ? findIndex(items, function (obj) {
                     return obj.id === item.id;
                 }) : findIndex(items, item);
 

@@ -30,7 +30,9 @@ var _findIndex = require('lodash/findIndex');
 
 var _findIndex2 = _interopRequireDefault(_findIndex);
 
-var _isObject = require('lodash/isObject');
+var _isPlainObject = require('lodash/isPlainObject');
+
+var _isPlainObject2 = _interopRequireDefault(_isPlainObject);
 
 var _DragLayer = require('../DragLayer');
 
@@ -77,7 +79,7 @@ function sortableContainer(WrappedComponent) {
                 // If sortable item is an object, find item that match id
                 // Otherwise let findIndex predicate on item
 
-                var newIndex = (0, _isObject.isObject)(item) ? (0, _findIndex2.default)(items, function (obj) {
+                var newIndex = (0, _isPlainObject2.default)(item) ? (0, _findIndex2.default)(items, function (obj) {
                     return obj.id === item.id;
                 }) : (0, _findIndex2.default)(items, item);
 
