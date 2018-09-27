@@ -30,6 +30,8 @@ var _findIndex = require('lodash/findIndex');
 
 var _findIndex2 = _interopRequireDefault(_findIndex);
 
+var _isObject = require('lodash/isObject');
+
 var _DragLayer = require('../DragLayer');
 
 var _DragLayer2 = _interopRequireDefault(_DragLayer);
@@ -72,7 +74,13 @@ function sortableContainer(WrappedComponent) {
 
                 var item = _this.manager.active.item;
 
-                var newIndex = (0, _findIndex2.default)(items, item);
+                // If sortable item is an object, find item that match id
+                // Otherwise let findIndex predicate on item
+
+                var newIndex = (0, _isObject.isObject)(item) ? (0, _findIndex2.default)(items, function (obj) {
+                    return obj.id === item.id;
+                }) : (0, _findIndex2.default)(items, item);
+
                 if (newIndex === -1) {
                     _this.dragLayer.stopDrag();
                     return;

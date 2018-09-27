@@ -3,6 +3,7 @@ import PropTypes from 'prop-types';
 import { findDOMNode } from 'react-dom';
 import invariant from 'invariant';
 import findIndex from 'lodash/findIndex';
+import { isObject } from 'lodash/isObject';
 import DragLayer from '../DragLayer';
 import Manager from '../Manager';
 import {
@@ -193,7 +194,13 @@ export default function sortableContainer(
         checkActiveIndex = nextProps => {
             const { items } = nextProps || this.props;
             const { item } = this.manager.active;
-            const newIndex = findIndex(items, item);
+
+            // If sortable item is an object, find item that match id
+            // Otherwise let findIndex predicate on item
+            const newIndex = isObject(item)
+                ? findIndex(items, obj => obj.id === item.id)
+                : findIndex(items, item);
+
             if (newIndex === -1) {
                 this.dragLayer.stopDrag();
                 return;

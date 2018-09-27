@@ -17,6 +17,7 @@ export interface SortOver {
     collection: Offset;
 }
 
+// NOTE: Consider renaming `newList`
 export interface SortEnd {
     oldIndex: number;
     newIndex: number;
@@ -81,6 +82,7 @@ export interface SortableContainerProps {
     getHelperDimensions?: (sort: SortStart) => Dimensions;
 }
 
+// TODO: Add correct types
 export class DragLayer {
     addRef: any;
     removeRef: any;
