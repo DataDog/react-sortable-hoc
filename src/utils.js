@@ -52,31 +52,11 @@ export const vendorPrefix = (function() {
   }
 })();
 
-export function getOffset(e) {
-  const event = e.touches ? e.touches[0] : e;
-  return {
-    x: event.clientX,
-    y: event.clientY,
-    pageX: event.pageX,
-    pageY: event.pageY,
-  };
-}
-
 export function closest(el, fn) {
   while (el) {
     if (fn(el)) return el;
     el = el.parentNode;
   }
-}
-
-export function clamp(value, min, max) {
-  if (value < min) {
-    return min;
-  }
-  if (value > max) {
-    return max;
-  }
-  return value;
 }
 
 export function limit(min, max, value) {

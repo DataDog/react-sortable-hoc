@@ -1,8 +1,8 @@
-import {clamp} from '../utils';
+import {limit} from '../utils';
 
 export function distanceRect(x, y, rect) {
-  const dx = x - clamp(x, rect.left, rect.right);
-  const dy = y - clamp(y, rect.top, rect.bottom);
+  const dx = x - limit(rect.left, rect.right, x);
+  const dy = y - limit(rect.top, rect.bottom, y);
 
   return Math.sqrt(dx * dx + dy * dy);
 }

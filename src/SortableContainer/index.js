@@ -3,18 +3,18 @@ import PropTypes from 'prop-types';
 import {findDOMNode} from 'react-dom';
 import invariant from 'invariant';
 import findIndex from 'lodash/findIndex';
+import isPlainObject from 'lodash/isPlainObject';
 import DragLayer from '../DragLayer';
 import Manager from '../Manager';
 import {
   closest,
   events,
-  getOffset,
+  getPosition,
   vendorPrefix,
   limit,
-    getEdgeOffset,
-    getLockPixelOffset,
-    getPosition,
-    isTouchEvent,
+  getEdgeOffset,
+  getLockPixelOffset,
+  isTouchEvent,
   provideDisplayName,
   omit,
 } from '../utils';
@@ -171,7 +171,13 @@ export default function sortableContainer(WrappedComponent, config = {withRef: f
     checkActiveIndex = nextProps => {
       const {items} = nextProps || this.props;
       const {item} = this.manager.active;
-      const newIndex = findIndex(items, item);
+
+        // If sortable item is an object, find item that match id
+        // Otherwise let findIndex predicate on item
+      const newIndex = isPlainObject(item)
+            ? findIndex(items, obj => obj.id === item.id)
+            : findIndex(items, item);
+
       if (newIndex === -1) {
         this.dragLayer.stopDrag();
         return;
@@ -181,7 +187,7 @@ export default function sortableContainer(WrappedComponent, config = {withRef: f
     };
 
     handleStart = event => {
-      const p = getOffset(event);
+      const p = getPosition(event);
       const {distance, shouldCancelStart, items} = this.props;
 
       if (event.button === 2 || shouldCancelStart(event)) {
@@ -237,7 +243,7 @@ export default function sortableContainer(WrappedComponent, config = {withRef: f
 
     handleMove = event => {
       const {distance, pressThreshold} = this.props;
-      const p = getOffset(event);
+      const p = getPosition(event);
       if (!this.state.sorting && this._touched) {
         const delta = this._delta = {
           x: this._pos.x - p.x,
@@ -428,13 +434,6 @@ export default function sortableContainer(WrappedComponent, config = {withRef: f
       }
     }
 
-    getOffset(e) {
-      return {
-        x: e.touches ? e.touches[0].pageX : e.pageX,
-        y: e.touches ? e.touches[0].pageY : e.pageY,
-      };
-    }
-
     getLockPixelOffsets() {
       const {width, height} = this.dragLayer;
       const {lockOffset} = this.props;
@@ -458,7 +457,7 @@ export default function sortableContainer(WrappedComponent, config = {withRef: f
     }
 
     getClosestNode = e => {
-      const p = getOffset(e);
+      const p = getPosition(e);
           // eslint-disable-next-line
           let closestNodes = [];
           // eslint-disable-next-line
@@ -496,7 +495,7 @@ export default function sortableContainer(WrappedComponent, config = {withRef: f
               // find closest collection
         const node = closest(e.target, el => el.sortableInfo != null);
         if (node && node.sortableInfo) {
-          const p = getOffset(e);
+          const p = getPosition(e);
           const {collection} = node.sortableInfo;
           const nodes = this.manager.refs[collection].map(n => n.node);
                   // find closest index in collection
@@ -518,7 +517,7 @@ export default function sortableContainer(WrappedComponent, config = {withRef: f
     updatePosition(event) {
       const {lockAxis, lockToContainerEdges} = this.currentList.props;
 
-      const offset = getOffset(event);
+      const offset = getPosition(event);
       const translate = {
         x: offset.x - this.initialOffset.x,
         y: offset.y - this.initialOffset.y,

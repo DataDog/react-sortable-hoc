@@ -1,9 +1,9 @@
 import {
   events,
   vendorPrefix,
-  getOffset,
+  getPosition,
   getElementMargin,
-  clamp,
+  limit,
 } from '../utils';
 import {closestRect, updateDistanceBetweenContainers} from './utils';
 
@@ -54,7 +54,7 @@ export default class DragLayer {
   }
 
   startDrag(parent, list, e) {
-    const offset = getOffset(e);
+    const offset = getPosition(e);
     const activeNode = list.manager.getActive();
 
     if (activeNode) {
@@ -172,7 +172,7 @@ export default class DragLayer {
 
   updatePosition(e) {
     const {lockAxis, lockToContainerEdges} = this.currentList.props;
-    const offset = getOffset(e);
+    const offset = getPosition(e);
     const translate = {
       x: offset.x - this.initialOffset.x,
       y: offset.y - this.initialOffset.y,
@@ -198,15 +198,15 @@ export default class DragLayer {
         y: this.height / 2 - maxLockOffset.y,
       };
 
-      translate.x = clamp(
-        translate.x,
+      translate.x = limit(
         this.minTranslate.x + minOffset.x,
         this.maxTranslate.x - maxOffset.x,
+          translate.x
       );
-      translate.y = clamp(
-        translate.y,
+      translate.y = limit(
         this.minTranslate.y + minOffset.y,
         this.maxTranslate.y - maxOffset.y,
+          translate.y,
       );
     }
 
@@ -222,9 +222,9 @@ export default class DragLayer {
   }
 
   updateTargetContainer(e) {
-    const {pageX, pageY} = this.delta;
+    const {x, y} = this.delta;
     const closest = this.lists[
-      closestRect(pageX, pageY, this.lists.map(l => l.container))
+      closestRect(x, y, this.lists.map(l => l.container))
     ];
     const {item} = this.currentList.manager.active;
     this.active = item;
