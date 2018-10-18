@@ -22,10 +22,13 @@ export default class Manager {
   }
 
   getActive() {
-    return this.refs[this.active.collection].find(
+    if (!this.active) return null;
+    const activeRef = this.refs[this.active.collection];
+    if (!activeRef) return null;
+    return activeRef.find(
       // eslint-disable-next-line eqeqeq
       ({node}) => node.sortableInfo.index == this.active.index
-    );
+    ) || activeRef.slice(-1).pop();
   }
 
   getIndex(collection, ref) {

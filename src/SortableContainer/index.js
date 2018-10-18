@@ -2,27 +2,32 @@ import React, {Component} from 'react';
 import PropTypes from 'prop-types';
 import {findDOMNode} from 'react-dom';
 import invariant from 'invariant';
-
+import findIndex from 'lodash/findIndex';
+import DragLayer from '../DragLayer';
 import Manager from '../Manager';
 import {
   closest,
   events,
+  getOffset,
   vendorPrefix,
   limit,
-  getEdgeOffset,
-  getElementMargin,
-  getLockPixelOffset,
-  getPosition,
-  isTouchEvent,
+    getEdgeOffset,
+    getLockPixelOffset,
+    getPosition,
+    isTouchEvent,
   provideDisplayName,
   omit,
 } from '../utils';
+import {closestRect} from '../DragLayer/utils';
 
 // Export Higher Order Sortable Container Component
 export default function sortableContainer(WrappedComponent, config = {withRef: false}) {
   return class extends Component {
     constructor(props) {
       super(props);
+      this.dragLayer = props.dragLayer || new DragLayer();
+      this.dragLayer.addRef(this);
+      this.dragLayer.onDragEnd = props.onDragEnd;
       this.manager = new Manager();
       this.events = {
         start: this.handleStart,
@@ -67,6 +72,7 @@ export default function sortableContainer(WrappedComponent, config = {withRef: f
     static propTypes = {
       axis: PropTypes.oneOf(['x', 'y', 'xy']),
       distance: PropTypes.number,
+      dragLayer: PropTypes.object,
       lockAxis: PropTypes.string,
       helperClass: PropTypes.string,
       transitionDuration: PropTypes.number,
@@ -75,6 +81,7 @@ export default function sortableContainer(WrappedComponent, config = {withRef: f
       onSortMove: PropTypes.func,
       onSortOver: PropTypes.func,
       onSortEnd: PropTypes.func,
+      onDragEnd: PropTypes.func,
       shouldCancelStart: PropTypes.func,
       pressDelay: PropTypes.number,
       useDragHandle: PropTypes.bool,
@@ -127,6 +134,10 @@ export default function sortableContainer(WrappedComponent, config = {withRef: f
         this.scrollContainer = useWindowAsScrollContainer
           ? this.document.scrollingElement || this.document.documentElement
           : this.container;
+        this.initialScroll = {
+          top: this.scrollContainer.scrollTop,
+          left: this.scrollContainer.scrollLeft,
+        };
 
         for (const key in this.events) {
           if (this.events.hasOwnProperty(key)) {
@@ -139,6 +150,7 @@ export default function sortableContainer(WrappedComponent, config = {withRef: f
     }
 
     componentWillUnmount() {
+      this.dragLayer.removeRef(this);
       if (this.container) {
         for (const key in this.events) {
           if (this.events.hasOwnProperty(key)) {
@@ -150,15 +162,34 @@ export default function sortableContainer(WrappedComponent, config = {withRef: f
       }
     }
 
+    componentWillReceiveProps(nextProps) {
+      const {active} = this.manager;
+      if (!active) return;
+      this.checkActiveIndex(nextProps);
+    }
+
+    checkActiveIndex = nextProps => {
+      const {items} = nextProps || this.props;
+      const {item} = this.manager.active;
+      const newIndex = findIndex(items, item);
+      if (newIndex === -1) {
+        this.dragLayer.stopDrag();
+        return;
+      }
+      this.manager.active.index = newIndex;
+      this.index = newIndex;
+    };
+
     handleStart = event => {
-      const {distance, shouldCancelStart} = this.props;
+      const p = getOffset(event);
+      const {distance, shouldCancelStart, items} = this.props;
 
       if (event.button === 2 || shouldCancelStart(event)) {
         return false;
       }
 
       this._touched = true;
-      this._pos = getPosition(event);
+      this._pos = p;
 
       const node = closest(event.target, el => el.sortableInfo != null);
 
@@ -176,13 +207,13 @@ export default function sortableContainer(WrappedComponent, config = {withRef: f
         )
           return;
 
-        this.manager.active = {index, collection};
+        this.manager.active = {index, collection, item: items[index]};
 
         /*
-				 * Fixes a bug in Firefox where the :active state of anchor tags
-				 * prevent subsequent 'mousemove' events from being fired
-				 * (see https://github.com/clauderic/react-sortable-hoc/issues/118)
-				 */
+         * Fixes a bug in Firefox where the :active state of anchor tags
+         * prevent subsequent 'mousemove' events from being fired
+         * (see https://github.com/clauderic/react-sortable-hoc/issues/118)
+         */
         if (!isTouchEvent(event) && event.target.tagName.toLowerCase() === 'a') {
           event.preventDefault();
         }
@@ -206,12 +237,11 @@ export default function sortableContainer(WrappedComponent, config = {withRef: f
 
     handleMove = event => {
       const {distance, pressThreshold} = this.props;
-
+      const p = getOffset(event);
       if (!this.state.sorting && this._touched) {
-        const position = getPosition(event);
         const delta = this._delta = {
-          x: this._pos.x - position.x,
-          y: this._pos.y - position.y,
+          x: this._pos.x - p.x,
+          y: this._pos.y - p.y,
         };
         const combinedDelta = Math.abs(delta.x) + Math.abs(delta.y);
 
@@ -242,79 +272,42 @@ export default function sortableContainer(WrappedComponent, config = {withRef: f
     };
 
     handlePress = event => {
-      const active = this.manager.getActive();
+      let activeNode = null;
+      if (this.dragLayer.helper) {
+        if (this.manager.active) {
+          this.checkActiveIndex();
+          activeNode = this.manager.getActive();
+        }
+      } else {
+        activeNode = this.dragLayer.startDrag(this.document.body, this, event);
+      }
 
-      if (active) {
+      if (activeNode) {
         const {
           axis,
-          getHelperDimensions,
           helperClass,
           hideSortableGhost,
           onSortStart,
-          useWindowAsScrollContainer,
         } = this.props;
-        const {node, collection} = active;
+        const {node, collection} = activeNode;
         const {index} = node.sortableInfo;
-        const margin = getElementMargin(node);
 
-        const containerBoundingRect = this.container.getBoundingClientRect();
-        const dimensions = getHelperDimensions({index, node, collection});
-
-        this.node = node;
-        this.margin = margin;
-        this.width = dimensions.width;
-        this.height = dimensions.height;
-        this.marginOffset = {
-          x: this.margin.left + this.margin.right,
-          y: Math.max(this.margin.top, this.margin.bottom),
-        };
-        this.boundingClientRect = node.getBoundingClientRect();
-        this.containerBoundingRect = containerBoundingRect;
         this.index = index;
         this.newIndex = index;
-
         this.axis = {
           x: axis.indexOf('x') >= 0,
           y: axis.indexOf('y') >= 0,
         };
-        this.offsetEdge = getEdgeOffset(node, this.container);
-        this.initialOffset = getPosition(event);
+
         this.initialScroll = {
           top: this.container.scrollTop,
           left: this.container.scrollLeft,
         };
 
         this.initialWindowScroll = {
-          top: window.pageYOffset,
-          left: window.pageXOffset,
+          top: window.scrollY,
+          left: window.scrollX,
         };
-
-        const fields = node.querySelectorAll('input, textarea, select, canvas');
-        const clonedNode = node.cloneNode(true);
-        const clonedFields = [
-          ...clonedNode.querySelectorAll('input, textarea, select, canvas'),
-        ]; // Convert NodeList to Array
-
-        clonedFields.forEach((field, index) => {
-          if (field.tagName === 'CANVAS') {
-            if (fields[index].tagName === 'CANVAS') {
-              const destCtx = field.getContext('2d');
-              destCtx.drawImage(fields[index], 0, 0);
-            }
-          } else if (field.type !== 'file' && fields[index]) {
-            field.value = fields[index].value;
-          }
-        });
-
-        this.helper = this.document.body.appendChild(clonedNode);
-
-        this.helper.style.position = 'fixed';
-        this.helper.style.top = `${this.boundingClientRect.top - margin.top}px`;
-        this.helper.style.left = `${this.boundingClientRect.left - margin.left}px`;
-        this.helper.style.width = `${this.width}px`;
-        this.helper.style.height = `${this.height}px`;
-        this.helper.style.boxSizing = 'border-box';
-        this.helper.style.pointerEvents = 'none';
 
         if (hideSortableGhost) {
           this.sortableGhost = node;
@@ -322,50 +315,9 @@ export default function sortableContainer(WrappedComponent, config = {withRef: f
           node.style.opacity = 0;
         }
 
-        this.minTranslate = {};
-        this.maxTranslate = {};
-        if (this.axis.x) {
-          this.minTranslate.x = (useWindowAsScrollContainer
-            ? 0
-            : containerBoundingRect.left) -
-            this.boundingClientRect.left -
-            this.width / 2;
-          this.maxTranslate.x = (useWindowAsScrollContainer
-            ? this.contentWindow.innerWidth
-            : containerBoundingRect.left + containerBoundingRect.width) -
-            this.boundingClientRect.left -
-            this.width / 2;
-        }
-        if (this.axis.y) {
-          this.minTranslate.y = (useWindowAsScrollContainer
-            ? 0
-            : containerBoundingRect.top) -
-            this.boundingClientRect.top -
-            this.height / 2;
-          this.maxTranslate.y = (useWindowAsScrollContainer
-            ? this.contentWindow.innerHeight
-            : containerBoundingRect.top + containerBoundingRect.height) -
-            this.boundingClientRect.top -
-            this.height / 2;
-        }
-
         if (helperClass) {
-          this.helper.classList.add(...helperClass.split(' '));
+          this.dragLayer.helper.classList.add(...helperClass.split(' '));
         }
-
-        this.listenerNode = event.touches ? node : this.contentWindow;
-        events.move.forEach(eventName =>
-          this.listenerNode.addEventListener(
-            eventName,
-            this.handleSortMove,
-            false
-          ));
-        events.end.forEach(eventName =>
-          this.listenerNode.addEventListener(
-            eventName,
-            this.handleSortEnd,
-            false
-          ));
 
         this.setState({
           sorting: true,
@@ -382,32 +334,24 @@ export default function sortableContainer(WrappedComponent, config = {withRef: f
       const {onSortMove} = this.props;
       event.preventDefault(); // Prevent scrolling on mobile
 
-      this.updatePosition(event);
-      this.animateNodes();
-      this.autoscroll();
+      // animate nodes if required
+      if (this.checkActive(event)) {
+        this.animateNodes();
+        this.autoscroll();
+      }
 
       if (onSortMove) {
         onSortMove(event);
       }
     };
 
-    handleSortEnd = event => {
+    handleSortEnd = (event, newList = null) => {
       const {hideSortableGhost, onSortEnd} = this.props;
-      const {collection} = this.manager.active;
-
-      // Remove the event listeners if the node is still in the DOM
-      if (this.listenerNode) {
-        events.move.forEach(eventName =>
-          this.listenerNode.removeEventListener(
-            eventName,
-            this.handleSortMove
-          ));
-        events.end.forEach(eventName =>
-          this.listenerNode.removeEventListener(eventName, this.handleSortEnd));
+      if (!this.manager.active) {
+        console.warn('there is no active node', event);
+        return;
       }
-
-      // Remove the helper from the DOM
-      this.helper.parentNode.removeChild(this.helper);
+      const {collection} = this.manager.active;
 
       if (hideSortableGhost && this.sortableGhost) {
         this.sortableGhost.style.visibility = '';
@@ -440,10 +384,16 @@ export default function sortableContainer(WrappedComponent, config = {withRef: f
       });
 
       if (typeof onSortEnd === 'function') {
+        // get the index in the new list
+        if (newList) {
+          this.newIndex = newList.getClosestNode(event).index;
+        }
+
         onSortEnd(
           {
             oldIndex: this.index,
             newIndex: this.newIndex,
+            newList,
             collection,
           },
           event
@@ -453,8 +403,40 @@ export default function sortableContainer(WrappedComponent, config = {withRef: f
       this._touched = false;
     };
 
+    handleSortSwap = (index, item) => {
+      const {onSortSwap} = this.props;
+      if (typeof onSortSwap === 'function') {
+        onSortSwap({
+          index,
+          item,
+        });
+      }
+    };
+
+    getEdgeOffset(node, offset = {top: 0, left: 0}) {
+      // Get the actual offsetTop / offsetLeft value, no matter how deep the node is nested
+      if (node) {
+        const nodeOffset = {
+          top: offset.top + node.offsetTop,
+          left: offset.left + node.offsetLeft,
+        };
+        if (node.parentNode !== this.container) {
+          return this.getEdgeOffset(node.parentNode, nodeOffset);
+        } else {
+          return nodeOffset;
+        }
+      }
+    }
+
+    getOffset(e) {
+      return {
+        x: e.touches ? e.touches[0].pageX : e.pageX,
+        y: e.touches ? e.touches[0].pageY : e.pageY,
+      };
+    }
+
     getLockPixelOffsets() {
-      const {width, height} = this;
+      const {width, height} = this.dragLayer;
       const {lockOffset} = this.props;
       const offsets = Array.isArray(lockOffset)
         ? lockOffset
@@ -475,20 +457,79 @@ export default function sortableContainer(WrappedComponent, config = {withRef: f
       ];
     }
 
-    updatePosition(event) {
-      const {lockAxis, lockToContainerEdges} = this.props;
+    getClosestNode = e => {
+      const p = getOffset(e);
+          // eslint-disable-next-line
+          let closestNodes = [];
+          // eslint-disable-next-line
+          let closestCollections = [];
+          //TODO: keys is converting number to string!!! check origin value type as number???
+      Object.keys(this.manager.refs).forEach(collection => {
+        const nodes = this.manager.refs[collection].map(n => n.node);
+        if (nodes && nodes.length > 0) {
+          closestNodes.push(nodes[closestRect(p.x, p.y, nodes)]);
+          closestCollections.push(collection);
+        }
+      });
+      const index = closestRect(p.x, p.y, closestNodes);
+      const collection = closestCollections[index];
+      if (collection === undefined) {
+        return {
+          collection,
+          index: 0,
+        };
+      }
+      const finalNodes = this.manager.refs[collection].map(n => n.node);
+      const finalIndex = finalNodes.indexOf(closestNodes[index]);
+      const node = closestNodes[index];
+          //TODO: add better support for grid
+      const rect = node.getBoundingClientRect();
+      return {
+        collection,
+        index: finalIndex + (p.y > rect.bottom ? 1 : 0),
+      };
+    };
 
-      const offset = getPosition(event);
+    checkActive = e => {
+      const active = this.manager.active;
+      if (!active) {
+              // find closest collection
+        const node = closest(e.target, el => el.sortableInfo != null);
+        if (node && node.sortableInfo) {
+          const p = getOffset(e);
+          const {collection} = node.sortableInfo;
+          const nodes = this.manager.refs[collection].map(n => n.node);
+                  // find closest index in collection
+          if (nodes) {
+            const index = closestRect(p.x, p.y, nodes);
+            this.manager.active = {
+              index,
+              collection,
+              item: this.props.items[index],
+            };
+            this.handlePress(e);
+          }
+        }
+        return false;
+      }
+      return true;
+    };
+
+    updatePosition(event) {
+      const {lockAxis, lockToContainerEdges} = this.currentList.props;
+
+      const offset = getOffset(event);
       const translate = {
         x: offset.x - this.initialOffset.x,
         y: offset.y - this.initialOffset.y,
       };
 
       // Adjust for window scroll
-      translate.y -= (window.pageYOffset - this.initialWindowScroll.top);
-      translate.x -= (window.pageXOffset - this.initialWindowScroll.left);
+      translate.y -= (window.scrollY - this.currentList.initialWindowScroll.top);
+      translate.x -= (window.scrollX - this.currentList.initialWindowScroll.left);
 
       this.translate = translate;
+      this.delta = offset;
 
       if (lockToContainerEdges) {
         const [minLockOffset, maxLockOffset] = this.getLockPixelOffsets();
@@ -525,6 +566,7 @@ export default function sortableContainer(WrappedComponent, config = {withRef: f
     }
 
     animateNodes() {
+      if (!this.axis) return;
       const {transitionDuration, hideSortableGhost, onSortOver} = this.props;
       const nodes = this.manager.getOrderedRefs();
       const containerScrollDelta = {
@@ -532,8 +574,14 @@ export default function sortableContainer(WrappedComponent, config = {withRef: f
         top: this.container.scrollTop - this.initialScroll.top,
       };
       const sortingOffset = {
-        left: this.offsetEdge.left + this.translate.x + containerScrollDelta.left,
-        top: this.offsetEdge.top + this.translate.y + containerScrollDelta.top,
+        left: this.dragLayer.offsetEdge.left -
+            this.dragLayer.distanceBetweenContainers.x +
+            this.dragLayer.translate.x +
+            containerScrollDelta.left,
+        top: this.dragLayer.offsetEdge.top -
+            this.dragLayer.distanceBetweenContainers.y +
+            this.dragLayer.translate.y +
+            containerScrollDelta.top,
       };
       const windowScrollDelta = {
         top: (window.pageYOffset - this.initialWindowScroll.top),
@@ -548,8 +596,12 @@ export default function sortableContainer(WrappedComponent, config = {withRef: f
         const width = node.offsetWidth;
         const height = node.offsetHeight;
         const offset = {
-          width: this.width > width ? width / 2 : this.width / 2,
-          height: this.height > height ? height / 2 : this.height / 2,
+          width: this.dragLayer.width > width
+              ? width / 2
+              : this.dragLayer.width / 2,
+          height: this.dragLayer.height > height
+              ? height / 2
+              : this.dragLayer.height / 2,
         };
 
         const translate = {
@@ -607,10 +659,11 @@ export default function sortableContainer(WrappedComponent, config = {withRef: f
             ) {
               // If the current node is to the left on the same row, or above the node that's being dragged
               // then move it to the right
-              translate.x = this.width + this.marginOffset.x;
+              translate.x = this.dragLayer.width +
+                this.dragLayer.marginOffset.x;
               if (
                 edgeOffset.left + translate.x >
-                this.containerBoundingRect.width - offset.width
+                this.dragLayer.containerBoundingRect.width - offset.width
               ) {
                 // If it moves passed the right bounds, then animate it to the first position of the next row.
                 // We just use the offset of the next node to calculate where to move, because that node's original position
@@ -631,10 +684,11 @@ export default function sortableContainer(WrappedComponent, config = {withRef: f
             ) {
               // If the current node is to the right on the same row, or below the node that's being dragged
               // then move it to the left
-              translate.x = -(this.width + this.marginOffset.x);
+              translate.x = -(this.dragLayer.width +
+                this.dragLayer.marginOffset.x);
               if (
                 edgeOffset.left + translate.x <
-                this.containerBoundingRect.left + offset.width
+                this.dragLayer.containerBoundingRect.left + offset.width
               ) {
                 // If it moves passed the left bounds, then animate it to the last position of the previous row.
                 // We just use the offset of the previous node to calculate where to move, because that node's original position
@@ -649,13 +703,16 @@ export default function sortableContainer(WrappedComponent, config = {withRef: f
               index > this.index &&
               (sortingOffset.left + windowScrollDelta.left) + offset.width >= edgeOffset.left
             ) {
-              translate.x = -(this.width + this.marginOffset.x);
+              translate.x = -(this.dragLayer.width +
+                this.dragLayer.marginOffset.x);
               this.newIndex = index;
             } else if (
               index < this.index &&
               (sortingOffset.left + windowScrollDelta.left) <= edgeOffset.left + offset.width
             ) {
-              translate.x = this.width + this.marginOffset.x;
+              translate.x = this.dragLayer.width +
+                this.dragLayer.marginOffset.x;
+
               if (this.newIndex == null) {
                 this.newIndex = index;
               }
@@ -666,19 +723,22 @@ export default function sortableContainer(WrappedComponent, config = {withRef: f
             index > this.index &&
             (sortingOffset.top + windowScrollDelta.top) + offset.height >= edgeOffset.top
           ) {
-            translate.y = -(this.height + this.marginOffset.y);
+            translate.y = -(this.dragLayer.height +
+              this.dragLayer.marginOffset.y);
             this.newIndex = index;
           } else if (
             index < this.index &&
             (sortingOffset.top + windowScrollDelta.top) <= edgeOffset.top + offset.height
           ) {
-            translate.y = this.height + this.marginOffset.y;
+            translate.y = this.dragLayer.height + this.dragLayer.marginOffset.y;
             if (this.newIndex == null) {
               this.newIndex = index;
             }
           }
         }
-        node.style[`${vendorPrefix}Transform`] = `translate3d(${translate.x}px,${translate.y}px,0)`;
+        node.style[
+          `${vendorPrefix}Transform`
+        ] = `translate3d(${translate.x}px,${translate.y}px,0)`;
       }
 
       if (this.newIndex == null) {
@@ -696,7 +756,7 @@ export default function sortableContainer(WrappedComponent, config = {withRef: f
     }
 
     autoscroll = () => {
-      const translate = this.translate;
+      const translate = this.dragLayer.translate;
       const direction = {
         x: 0,
         y: 0,
@@ -710,18 +770,50 @@ export default function sortableContainer(WrappedComponent, config = {withRef: f
         y: 10,
       };
 
-      if (translate.y >= this.maxTranslate.y - this.height / 2) {
+      if (
+        translate.y >= this.dragLayer.maxTranslate.y - this.dragLayer.height / 2
+      ) {
         direction.y = 1; // Scroll Down
-        speed.y = acceleration.y * Math.abs((this.maxTranslate.y - this.height / 2 - translate.y) / this.height);
-      } else if (translate.x >= this.maxTranslate.x - this.width / 2) {
+        speed.y = acceleration.y *
+          Math.abs(
+            (this.dragLayer.maxTranslate.y -
+              this.dragLayer.height / 2 -
+              translate.y) /
+              this.dragLayer.height,
+          );
+      } else if (
+        translate.x >= this.dragLayer.maxTranslate.x - this.dragLayer.width / 2
+      ) {
         direction.x = 1; // Scroll Right
-        speed.x = acceleration.x * Math.abs((this.maxTranslate.x - this.width / 2 - translate.x) / this.width);
-      } else if (translate.y <= this.minTranslate.y + this.height / 2) {
+        speed.x = acceleration.x *
+          Math.abs(
+            (this.dragLayer.maxTranslate.x -
+              this.dragLayer.width / 2 -
+              translate.x) /
+              this.dragLayer.width,
+          );
+      } else if (
+        translate.y <= this.dragLayer.minTranslate.y + this.dragLayer.height / 2
+      ) {
         direction.y = -1; // Scroll Up
-        speed.y = acceleration.y * Math.abs((translate.y - this.height / 2 - this.minTranslate.y) / this.height);
-      } else if (translate.x <= this.minTranslate.x + this.width / 2) {
+        speed.y = acceleration.y *
+          Math.abs(
+            (translate.y -
+              this.dragLayer.height / 2 -
+              this.dragLayer.minTranslate.y) /
+              this.dragLayer.height,
+          );
+      } else if (
+        translate.x <= this.dragLayer.minTranslate.x + this.dragLayer.width / 2
+      ) {
         direction.x = -1; // Scroll Left
-        speed.x = acceleration.x * Math.abs((translate.x - this.width / 2 - this.minTranslate.x) / this.width);
+        speed.x = acceleration.x *
+          Math.abs(
+            (translate.x -
+              this.dragLayer.width / 2 -
+              this.dragLayer.minTranslate.x) /
+              this.dragLayer.width,
+          );
       }
 
       if (this.autoscrollInterval) {
@@ -740,11 +832,11 @@ export default function sortableContainer(WrappedComponent, config = {withRef: f
             };
             this.scrollContainer.scrollTop += offset.top;
             this.scrollContainer.scrollLeft += offset.left;
-            this.translate.x += offset.left;
-            this.translate.y += offset.top;
+            // this.dragLayer.translate.x += offset.left;
+            // this.dragLayer.translate.y += offset.top;
             this.animateNodes();
           },
-          5
+          5,
         );
       }
     };
@@ -787,6 +879,7 @@ export default function sortableContainer(WrappedComponent, config = {withRef: f
             'pressThreshold',
             'shouldCancelStart',
             'onSortStart',
+            'onSortSwap',
             'onSortMove',
             'onSortEnd',
             'axis',

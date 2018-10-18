@@ -2,13 +2,23 @@ import invariant from 'invariant';
 
 export function arrayMove(arr, previousIndex, newIndex) {
   const array = arr.slice(0);
-  if (newIndex >= array.length) {
-    let k = newIndex - array.length;
-    while (k-- + 1) {
-      array.push(undefined);
+  if(newIndex === -1){
+    array.splice(previousIndex, 1);
+  } else {
+    if (newIndex >= array.length) {
+      let k = newIndex - array.length;
+      while (k-- + 1) {
+        array.push(undefined);
+      }
     }
+    array.splice(newIndex, 0, array.splice(previousIndex, 1)[0]);
   }
-  array.splice(newIndex, 0, array.splice(previousIndex, 1)[0]);
+  return array;
+}
+
+export function arrayInsert(arr, index, item) {
+  const array = arr.slice(0);
+  array.splice(index, 0, item);
   return array;
 }
 
@@ -42,11 +52,31 @@ export const vendorPrefix = (function() {
   }
 })();
 
+export function getOffset(e) {
+  const event = e.touches ? e.touches[0] : e;
+  return {
+    x: event.clientX,
+    y: event.clientY,
+    pageX: event.pageX,
+    pageY: event.pageY,
+  };
+}
+
 export function closest(el, fn) {
   while (el) {
     if (fn(el)) return el;
     el = el.parentNode;
   }
+}
+
+export function clamp(value, min, max) {
+  if (value < min) {
+    return min;
+  }
+  if (value > max) {
+    return max;
+  }
+  return value;
 }
 
 export function limit(min, max, value) {
