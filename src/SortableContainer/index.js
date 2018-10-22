@@ -19,6 +19,7 @@ import {
   omit,
 } from '../utils';
 import {closestRect} from '../DragLayer/utils';
+import 'classlist-polyfill';
 
 // Export Higher Order Sortable Container Component
 export default function sortableContainer(WrappedComponent, config = {withRef: false}) {
