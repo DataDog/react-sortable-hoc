@@ -20,7 +20,13 @@ export interface SortOver {
 export interface SortEnd {
   oldIndex: number;
   newIndex: number;
+  newList: any;
   collection: Offset;
+}
+
+export interface SortSwap {
+    item: any;
+    index: number;
 }
 
 export type SortEvent = React.MouseEvent<any> | React.TouchEvent<any>;
@@ -39,11 +45,25 @@ export type SortEndHandler = (sort: SortEnd, event: SortEvent) => void;
 
 export type SortOverHandler = (sort: SortOver, event: SortEvent) => void;
 
+export type SortSwapHandler = (sort: SortSwap) => void;
+
 export type ContainerGetter = (element: React.ReactElement<any>) => HTMLElement | Promise<HTMLElement>;
 
 export interface Dimensions {
   width: number;
   height: number;
+}
+
+export class DragLayer {
+    addRef: any;
+    removeRef: any;
+    setTranslateBoundaries: any;
+    startDrag: any;
+    stopDrag: any;
+    handleSortMove: any;
+    handleSortEnd: any;
+    updatePosition: any;
+    updateTargetContainer: any;
 }
 
 export interface SortableContainerProps {
@@ -54,11 +74,14 @@ export interface SortableContainerProps {
   pressDelay?: number;
   pressThreshold?: number;
   distance?: number;
+  items?: any;
   shouldCancelStart?: (event: SortEvent | SortEventWithTag) => boolean;
   onSortStart?: SortStartHandler;
   onSortMove?: SortMoveHandler;
   onSortEnd?: SortEndHandler;
   onSortOver?: SortOverHandler;
+  onSortSwap?: SortSwapHandler;
+  dragLayer?: DragLayer;
   useDragHandle?: boolean;
   useWindowAsScrollContainer?: boolean;
   hideSortableGhost?: boolean;
@@ -89,3 +112,5 @@ export function SortableElement<P>(wrappedComponent: WrappedComponent<P>, config
 export function SortableHandle<P>(wrappedComponent: WrappedComponent<P>, config?: Config): React.ComponentClass<P>;
 
 export function arrayMove<T>(collection: T[], previousIndex: number, newIndex: number): T[];
+
+export function arrayInsert<T>(collection: T[], index: number, item: any): T[];
