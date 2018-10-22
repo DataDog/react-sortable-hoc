@@ -135,7 +135,6 @@ export function getEdgeOffset(node, parent, offset = {top: 0, left: 0}) {
   }
 }
 
-
 export function getLockPixelOffset({lockOffset, width, height}) {
   let offsetX = lockOffset;
   let offsetY = lockOffset;

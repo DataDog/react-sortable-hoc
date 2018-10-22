@@ -122,7 +122,8 @@ var DragLayer = function () {
           x: axis.indexOf('x') >= 0,
           y: axis.indexOf('y') >= 0
         };
-        this.offsetEdge = list.getEdgeOffset(node);
+        this.offsetEdge = (0, _utils.getEdgeOffset)(node, list.container);
+
         this.initialOffset = offset;
         this.distanceBetweenContainers = {
           x: 0,
@@ -186,8 +187,8 @@ var DragLayer = function () {
         y: offset.y - this.initialOffset.y
       };
       // Adjust for window scroll
-      translate.y -= window.scrollY - this.currentList.initialWindowScroll.top;
-      translate.x -= window.scrollX - this.currentList.initialWindowScroll.left;
+      translate.y -= window.pageYOffset - this.currentList.initialWindowScroll.top;
+      translate.x -= window.pageXOffset - this.currentList.initialWindowScroll.left;
 
       this.translate = translate;
       this.delta = offset;

@@ -92,7 +92,6 @@ function sortableContainer(WrappedComponent) {
       };
 
       _this.handleStart = function (event) {
-        var p = (0, _utils.getPosition)(event);
         var _this$props = _this.props,
             distance = _this$props.distance,
             shouldCancelStart = _this$props.shouldCancelStart,
@@ -104,7 +103,7 @@ function sortableContainer(WrappedComponent) {
         }
 
         _this._touched = true;
-        _this._pos = p;
+        _this._pos = (0, _utils.getPosition)(event);
 
         var node = (0, _utils.closest)(event.target, function (el) {
           return el.sortableInfo != null;
@@ -153,11 +152,11 @@ function sortableContainer(WrappedComponent) {
             distance = _this$props2.distance,
             pressThreshold = _this$props2.pressThreshold;
 
-        var p = (0, _utils.getPosition)(event);
         if (!_this.state.sorting && _this._touched) {
+          var position = (0, _utils.getPosition)(event);
           var delta = _this._delta = {
-            x: _this._pos.x - p.x,
-            y: _this._pos.y - p.y
+            x: _this._pos.x - position.x,
+            y: _this._pos.y - position.y
           };
           var combinedDelta = Math.abs(delta.x) + Math.abs(delta.y);
 
@@ -224,8 +223,8 @@ function sortableContainer(WrappedComponent) {
           };
 
           _this.initialWindowScroll = {
-            top: window.scrollY,
-            left: window.scrollX
+            top: window.pageYOffset,
+            left: window.pageXOffset
           };
 
           if (hideSortableGhost) {
@@ -338,23 +337,24 @@ function sortableContainer(WrappedComponent) {
         }
       };
 
-      _this.getClosestNode = function (e) {
-        var p = (0, _utils.getPosition)(e);
+      _this.getClosestNode = function (event) {
+        var position = (0, _utils.getPosition)(event);
         // eslint-disable-next-line
         var closestNodes = [];
         // eslint-disable-next-line
         var closestCollections = [];
+
         //TODO: keys is converting number to string!!! check origin value type as number???
         Object.keys(_this.manager.refs).forEach(function (collection) {
           var nodes = _this.manager.refs[collection].map(function (n) {
             return n.node;
           });
           if (nodes && nodes.length > 0) {
-            closestNodes.push(nodes[(0, _utils2.closestRect)(p.x, p.y, nodes)]);
+            closestNodes.push(nodes[(0, _utils2.closestRect)(position.x, position.y, nodes)]);
             closestCollections.push(collection);
           }
         });
-        var index = (0, _utils2.closestRect)(p.x, p.y, closestNodes);
+        var index = (0, _utils2.closestRect)(position.x, position.y, closestNodes);
         var collection = closestCollections[index];
         if (collection === undefined) {
           return {
@@ -371,19 +371,19 @@ function sortableContainer(WrappedComponent) {
         var rect = node.getBoundingClientRect();
         return {
           collection: collection,
-          index: finalIndex + (p.y > rect.bottom ? 1 : 0)
+          index: finalIndex + (position.y > rect.bottom ? 1 : 0)
         };
       };
 
-      _this.checkActive = function (e) {
+      _this.checkActive = function (event) {
         var active = _this.manager.active;
         if (!active) {
           // find closest collection
-          var node = (0, _utils.closest)(e.target, function (el) {
+          var node = (0, _utils.closest)(event.target, function (el) {
             return el.sortableInfo != null;
           });
           if (node && node.sortableInfo) {
-            var p = (0, _utils.getPosition)(e);
+            var p = (0, _utils.getPosition)(event);
             var collection = node.sortableInfo.collection;
 
             var nodes = _this.manager.refs[collection].map(function (n) {
@@ -397,7 +397,7 @@ function sortableContainer(WrappedComponent) {
                 collection: collection,
                 item: _this.props.items[index]
               };
-              _this.handlePress(e);
+              _this.handlePress(event);
             }
           }
           return false;
@@ -449,8 +449,6 @@ function sortableContainer(WrappedComponent) {
             };
             _this.scrollContainer.scrollTop += offset.top;
             _this.scrollContainer.scrollLeft += offset.left;
-            // this.dragLayer.translate.x += offset.left;
-            // this.dragLayer.translate.y += offset.top;
             _this.animateNodes();
           }, 5);
         }
@@ -549,24 +547,6 @@ function sortableContainer(WrappedComponent) {
         this.checkActiveIndex(nextProps);
       }
     }, {
-      key: 'getEdgeOffset',
-      value: function getEdgeOffset(node) {
-        var offset = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : { top: 0, left: 0 };
-
-        // Get the actual offsetTop / offsetLeft value, no matter how deep the node is nested
-        if (node) {
-          var nodeOffset = {
-            top: offset.top + node.offsetTop,
-            left: offset.left + node.offsetLeft
-          };
-          if (node.parentNode !== this.container) {
-            return this.getEdgeOffset(node.parentNode, nodeOffset);
-          } else {
-            return nodeOffset;
-          }
-        }
-      }
-    }, {
       key: 'getLockPixelOffsets',
       value: function getLockPixelOffsets() {
         var _dragLayer = this.dragLayer,
@@ -599,8 +579,8 @@ function sortableContainer(WrappedComponent) {
         };
 
         // Adjust for window scroll
-        translate.y -= window.scrollY - this.currentList.initialWindowScroll.top;
-        translate.x -= window.scrollX - this.currentList.initialWindowScroll.left;
+        translate.y -= window.pageYOffset - this.currentList.initialWindowScroll.top;
+        translate.x -= window.pageXOffset - this.currentList.initialWindowScroll.left;
 
         this.translate = translate;
         this.delta = offset;
@@ -817,11 +797,11 @@ function sortableContainer(WrappedComponent) {
     distance: 0,
     useWindowAsScrollContainer: false,
     hideSortableGhost: true,
-    shouldCancelStart: function shouldCancelStart(e) {
+    shouldCancelStart: function shouldCancelStart(event) {
       // Cancel sorting if the event target is an `input`, `textarea`, `select` or `option`
       var disabledElements = ['input', 'textarea', 'select', 'option', 'button'];
 
-      if (disabledElements.indexOf(e.target.tagName.toLowerCase()) !== -1) {
+      if (disabledElements.indexOf(event.target.tagName.toLowerCase()) !== -1) {
         return true; // Return true to cancel sorting
       }
     },

@@ -13,9 +13,16 @@ var _utils = require('../utils');
 function _toConsumableArray(arr) { if (Array.isArray(arr)) { for (var i = 0, arr2 = Array(arr.length); i < arr.length; i++) { arr2[i] = arr[i]; } return arr2; } else { return Array.from(arr); } }
 
 function distanceRect(x, y, rect) {
-  var dx = x - (0, _utils.limit)(rect.left, rect.right, x);
-  var dy = y - (0, _utils.limit)(rect.top, rect.bottom, y);
+  // Take account of scroll
+  var pageXOffset = window.pageXOffset;
+  var pageYOffset = window.pageYOffset;
 
+  var left = rect.left + pageXOffset;
+  var right = rect.right + pageXOffset;
+  var top = rect.top + pageYOffset;
+  var bottom = rect.bottom + pageYOffset;
+  var dx = x - (0, _utils.limit)(left, right, x);
+  var dy = y - (0, _utils.limit)(top, bottom, y);
   return Math.sqrt(dx * dx + dy * dy);
 }
 

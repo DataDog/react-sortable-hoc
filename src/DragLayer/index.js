@@ -3,6 +3,7 @@ import {
   vendorPrefix,
   getPosition,
   getElementMargin,
+  getEdgeOffset,
   limit,
 } from '../utils';
 import {closestRect, updateDistanceBetweenContainers} from './utils';
@@ -82,7 +83,8 @@ export default class DragLayer {
         x: axis.indexOf('x') >= 0,
         y: axis.indexOf('y') >= 0,
       };
-      this.offsetEdge = list.getEdgeOffset(node);
+      this.offsetEdge = getEdgeOffset(node, list.container);
+
       this.initialOffset = offset;
       this.distanceBetweenContainers = {
         x: 0,
@@ -178,8 +180,8 @@ export default class DragLayer {
       y: offset.y - this.initialOffset.y,
     };
     // Adjust for window scroll
-    translate.y -= (window.scrollY - this.currentList.initialWindowScroll.top);
-    translate.x -= (window.scrollX - this.currentList.initialWindowScroll.left);
+    translate.y -= (window.pageYOffset - this.currentList.initialWindowScroll.top);
+    translate.x -= (window.pageXOffset - this.currentList.initialWindowScroll.left);
 
     this.translate = translate;
     this.delta = offset;

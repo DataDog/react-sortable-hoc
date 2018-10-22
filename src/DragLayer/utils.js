@@ -1,9 +1,16 @@
 import {limit} from '../utils';
 
 export function distanceRect(x, y, rect) {
-  const dx = x - limit(rect.left, rect.right, x);
-  const dy = y - limit(rect.top, rect.bottom, y);
+  // Take account of scroll
+  const pageXOffset = window.pageXOffset;
+  const pageYOffset = window.pageYOffset;
 
+  const left = rect.left + pageXOffset;
+  const right = rect.right + pageXOffset;
+  const top = rect.top + pageYOffset;
+  const bottom = rect.bottom + pageYOffset;
+  const dx = x - limit(left, right, x);
+  const dy = y - limit(top, bottom, y);
   return Math.sqrt(dx * dx + dy * dy);
 }
 
