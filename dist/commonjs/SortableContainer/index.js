@@ -252,15 +252,32 @@ function sortableContainer(WrappedComponent) {
         }
       };
 
+      _this._handleSortMove = function (event) {
+        // animate nodes if required
+        if (_this.checkActive(event)) {
+          _this.animateNodes();
+          _this.autoscroll();
+        }
+
+        if (window.requestAnimationFrame) _this.sortMoveAF = null;else setTimeout(function () {
+          _this.sortMoveAF = null;
+        }, 1000 / 60); // aim for 60 fps
+      };
+
       _this.handleSortMove = function (event) {
         var onSortMove = _this.props.onSortMove;
 
         event.preventDefault(); // Prevent scrolling on mobile
 
-        // animate nodes if required
-        if (_this.checkActive(event)) {
-          _this.animateNodes();
-          _this.autoscroll();
+        if (_this.sortMoveAF) {
+          return;
+        }
+
+        if (window.requestAnimationFrame) {
+          _this.sortMoveAF = window.requestAnimationFrame(_this._handleSortMove);
+        } else {
+          _this.sortMoveAF = true;
+          _this._handleSortMove(); // call inner function now if no animation frame
         }
 
         if (onSortMove) {
@@ -280,6 +297,12 @@ function sortableContainer(WrappedComponent) {
         }
         var collection = _this.manager.active.collection;
 
+        // Remove the move handler if there's a frame that hasn't run yet.
+
+        if (window.cancelAnimationFrame && _this.sortMoveAF) {
+          window.cancelAnimationFrame(_this.sortMoveAF);
+          _this.sortMoveAF = null;
+        }
 
         if (hideSortableGhost && _this.sortableGhost) {
           _this.sortableGhost.style.visibility = '';
