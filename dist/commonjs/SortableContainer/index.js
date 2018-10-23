@@ -111,7 +111,7 @@ function sortableContainer(WrappedComponent) {
           return el.sortableInfo != null;
         });
 
-        if (node && node.sortableInfo && _this.nodeIsChild(node) && !_this.state.sorting) {
+        if (node && node.sortableInfo && _this.nodeIsChild(node) && !_this.sorting) {
           var useDragHandle = _this.props.useDragHandle;
           var _node$sortableInfo = node.sortableInfo,
               index = _node$sortableInfo.index,
@@ -154,7 +154,7 @@ function sortableContainer(WrappedComponent) {
             distance = _this$props2.distance,
             pressThreshold = _this$props2.pressThreshold;
 
-        if (!_this.state.sorting && _this._touched) {
+        if (!_this.sorting && _this._touched) {
           var position = (0, _utils.getPosition)(event);
           var delta = _this._delta = {
             x: _this._pos.x - position.x,
@@ -183,7 +183,7 @@ function sortableContainer(WrappedComponent) {
       };
 
       _this.cancel = function () {
-        if (!_this.state.sorting) {
+        if (!_this.sorting) {
           clearTimeout(_this.pressTimer);
           _this.manager.active = null;
         }
@@ -241,10 +241,8 @@ function sortableContainer(WrappedComponent) {
             (_this$dragLayer$helpe = _this.dragLayer.helper.classList).add.apply(_this$dragLayer$helpe, _toConsumableArray(helperClass.split(' ')));
           }
 
-          _this.setState({
-            sorting: true,
-            sortingIndex: index
-          });
+          _this.sorting = true;
+          _this.sortingIndex = index;
 
           if (onSortStart) {
             onSortStart({ node: node, index: index, collection: collection }, event);
@@ -252,15 +250,32 @@ function sortableContainer(WrappedComponent) {
         }
       };
 
+      _this._handleSortMove = function (event) {
+        // animate nodes if required
+        if (_this.checkActive(event)) {
+          _this.animateNodes();
+          _this.autoscroll();
+        }
+
+        if (window.requestAnimationFrame) _this.sortMoveAF = null;else setTimeout(function () {
+          _this.sortMoveAF = null;
+        }, 1000 / 60); // aim for 60 fps
+      };
+
       _this.handleSortMove = function (event) {
         var onSortMove = _this.props.onSortMove;
 
         event.preventDefault(); // Prevent scrolling on mobile
 
-        // animate nodes if required
-        if (_this.checkActive(event)) {
-          _this.animateNodes();
-          _this.autoscroll();
+        if (_this.sortMoveAF) {
+          return;
+        }
+
+        if (window.requestAnimationFrame) {
+          _this.sortMoveAF = window.requestAnimationFrame(_this._handleSortMove);
+        } else {
+          _this.sortMoveAF = true;
+          _this._handleSortMove(); // call inner function now if no animation frame
         }
 
         if (onSortMove) {
@@ -280,6 +295,12 @@ function sortableContainer(WrappedComponent) {
         }
         var collection = _this.manager.active.collection;
 
+        // Remove the move handler if there's a frame that hasn't run yet.
+
+        if (window.cancelAnimationFrame && _this.sortMoveAF) {
+          window.cancelAnimationFrame(_this.sortMoveAF);
+          _this.sortMoveAF = null;
+        }
 
         if (hideSortableGhost && _this.sortableGhost) {
           _this.sortableGhost.style.visibility = '';
@@ -306,10 +327,8 @@ function sortableContainer(WrappedComponent) {
         // Update state
         _this.manager.active = null;
 
-        _this.setState({
-          sorting: false,
-          sortingIndex: null
-        });
+        _this.sorting = false;
+        _this.sortingIndex = null;
 
         if (typeof onSortEnd === 'function') {
           // get the index in the new list
@@ -469,6 +488,7 @@ function sortableContainer(WrappedComponent) {
       (0, _invariant2.default)(!(props.distance && props.pressDelay), 'Attempted to set both `pressDelay` and `distance` on SortableContainer, you may only use one or the other, not both at the same time.');
 
       _this.state = {};
+      _this.sorting = false;
       return _this;
     }
 
