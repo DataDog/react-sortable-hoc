@@ -336,15 +336,34 @@ export default function sortableContainer(WrappedComponent, config = {withRef: f
       }
     };
 
+    _handleSortMove = event => {
+        // animate nodes if required
+        if (this.checkActive(event)) {
+            this.animateNodes();
+            this.autoscroll();
+        }
+
+      if (window.requestAnimationFrame)
+        this.sortMoveAF = null;
+      else setTimeout(() =>{
+        this.sortMoveAF = null;
+      }, 1000/60); // aim for 60 fps
+    };
+
     handleSortMove = event => {
       const {onSortMove} = this.props;
       event.preventDefault(); // Prevent scrolling on mobile
 
-      // animate nodes if required
-      if (this.checkActive(event)) {
-        this.animateNodes();
-        this.autoscroll();
-      }
+        if (this.sortMoveAF) {
+            return;
+        }
+
+        if (window.requestAnimationFrame) {
+            this.sortMoveAF = window.requestAnimationFrame(this._handleSortMove);
+        } else {
+            this.sortMoveAF = true;
+            this._handleSortMove(); // call inner function now if no animation frame
+        }
 
       if (onSortMove) {
         onSortMove(event);
@@ -358,6 +377,12 @@ export default function sortableContainer(WrappedComponent, config = {withRef: f
         return;
       }
       const {collection} = this.manager.active;
+
+        // Remove the move handler if there's a frame that hasn't run yet.
+        if (window.cancelAnimationFrame && this.sortMoveAF){
+            window.cancelAnimationFrame(this.sortMoveAF);
+            this.sortMoveAF = null;
+        }
 
       if (hideSortableGhost && this.sortableGhost) {
         this.sortableGhost.style.visibility = '';
