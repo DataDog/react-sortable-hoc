@@ -587,61 +587,14 @@ function sortableContainer(WrappedComponent) {
         return [(0, _utils.getLockPixelOffset)({ lockOffset: minLockOffset, width: width, height: height }), (0, _utils.getLockPixelOffset)({ lockOffset: maxLockOffset, width: width, height: height })];
       }
     }, {
-      key: 'updatePosition',
-      value: function updatePosition(event) {
-        var _currentList$props = this.currentList.props,
-            lockAxis = _currentList$props.lockAxis,
-            lockToContainerEdges = _currentList$props.lockToContainerEdges;
-
-
-        var offset = (0, _utils.getPosition)(event);
-        var translate = {
-          x: offset.x - this.initialOffset.x,
-          y: offset.y - this.initialOffset.y
-        };
-
-        // Adjust for window scroll
-        translate.y -= window.pageYOffset - this.currentList.initialWindowScroll.top;
-        translate.x -= window.pageXOffset - this.currentList.initialWindowScroll.left;
-
-        this.translate = translate;
-        this.delta = offset;
-
-        if (lockToContainerEdges) {
-          var _getLockPixelOffsets = this.getLockPixelOffsets(),
-              _getLockPixelOffsets2 = _slicedToArray(_getLockPixelOffsets, 2),
-              minLockOffset = _getLockPixelOffsets2[0],
-              maxLockOffset = _getLockPixelOffsets2[1];
-
-          var minOffset = {
-            x: this.width / 2 - minLockOffset.x,
-            y: this.height / 2 - minLockOffset.y
-          };
-          var maxOffset = {
-            x: this.width / 2 - maxLockOffset.x,
-            y: this.height / 2 - maxLockOffset.y
-          };
-
-          translate.x = (0, _utils.limit)(this.minTranslate.x + minOffset.x, this.maxTranslate.x - maxOffset.x, translate.x);
-          translate.y = (0, _utils.limit)(this.minTranslate.y + minOffset.y, this.maxTranslate.y - maxOffset.y, translate.y);
-        }
-
-        if (lockAxis === 'x') {
-          translate.y = 0;
-        } else if (lockAxis === 'y') {
-          translate.x = 0;
-        }
-
-        this.helper.style[_utils.vendorPrefix + 'Transform'] = 'translate3d(' + translate.x + 'px,' + translate.y + 'px, 0)';
-      }
-    }, {
       key: 'animateNodes',
       value: function animateNodes() {
         if (!this.axis) return;
         var _props = this.props,
             transitionDuration = _props.transitionDuration,
             hideSortableGhost = _props.hideSortableGhost,
-            onSortOver = _props.onSortOver;
+            onSortOver = _props.onSortOver,
+            animateNodes = _props.animateNodes;
 
         var nodes = this.manager.getOrderedRefs();
         var containerScrollDelta = {
@@ -696,10 +649,10 @@ function sortableContainer(WrappedComponent) {
           if (index === this.index) {
             if (hideSortableGhost) {
               /*
-              * With windowing libraries such as `react-virtualized`, the sortableGhost
-              * node may change while scrolling down and then back up (or vice-versa),
-              * so we need to update the reference to the new node just to be safe.
-              */
+               * With windowing libraries such as `react-virtualized`, the sortableGhost
+               * node may change while scrolling down and then back up (or vice-versa),
+               * so we need to update the reference to the new node just to be safe.
+               */
               this.sortableGhost = node;
               node.style.visibility = 'hidden';
               node.style.opacity = 0;
@@ -764,7 +717,11 @@ function sortableContainer(WrappedComponent) {
               }
             }
           }
-          node.style[_utils.vendorPrefix + 'Transform'] = 'translate3d(' + translate.x + 'px,' + translate.y + 'px,0)';
+
+          // Translate the position of the given node
+          if (animateNodes) {
+            node.style[_utils.vendorPrefix + 'Transform'] = 'translate3d(' + translate.x + 'px,' + translate.y + 'px,0)';
+          }
         }
 
         if (this.newIndex == null) {
@@ -806,7 +763,7 @@ function sortableContainer(WrappedComponent) {
 
         return _react2.default.createElement(WrappedComponent, _extends({
           ref: ref
-        }, (0, _utils.omit)(this.props, 'contentWindow', 'useWindowAsScrollContainer', 'distance', 'helperClass', 'hideSortableGhost', 'transitionDuration', 'useDragHandle', 'pressDelay', 'pressThreshold', 'shouldCancelStart', 'onSortStart', 'onSortSwap', 'onSortMove', 'onSortEnd', 'axis', 'lockAxis', 'lockOffset', 'lockToContainerEdges', 'getContainer', 'getHelperDimensions')));
+        }, (0, _utils.omit)(this.props, 'contentWindow', 'useWindowAsScrollContainer', 'distance', 'helperClass', 'hideSortableGhost', 'transitionDuration', 'useDragHandle', 'animateNodes', 'pressDelay', 'pressThreshold', 'shouldCancelStart', 'onSortStart', 'onSortSwap', 'onSortMove', 'onSortEnd', 'axis', 'lockAxis', 'lockOffset', 'lockToContainerEdges', 'getContainer', 'getHelperDimensions')));
       }
     }]);
 
@@ -819,6 +776,7 @@ function sortableContainer(WrappedComponent) {
     distance: 0,
     useWindowAsScrollContainer: false,
     hideSortableGhost: true,
+    animateNodes: true,
     shouldCancelStart: function shouldCancelStart(event) {
       // Cancel sorting if the event target is an `input`, `textarea`, `select` or `option`
       var disabledElements = ['input', 'textarea', 'select', 'option', 'button'];
@@ -852,6 +810,7 @@ function sortableContainer(WrappedComponent) {
     shouldCancelStart: _propTypes2.default.func,
     pressDelay: _propTypes2.default.number,
     useDragHandle: _propTypes2.default.bool,
+    animateNodes: _propTypes2.default.bool,
     useWindowAsScrollContainer: _propTypes2.default.bool,
     hideSortableGhost: _propTypes2.default.bool,
     lockToContainerEdges: _propTypes2.default.bool,

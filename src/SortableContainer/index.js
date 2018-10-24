@@ -10,7 +10,6 @@ import {
   closest,
   events,
   vendorPrefix,
-  limit,
   getEdgeOffset,
   getLockPixelOffset,
   getPosition,
@@ -55,6 +54,7 @@ export default function sortableContainer(WrappedComponent, config = {withRef: f
       distance: 0,
       useWindowAsScrollContainer: false,
       hideSortableGhost: true,
+      animateNodes: true,
       shouldCancelStart: function(event) {
         // Cancel sorting if the event target is an `input`, `textarea`, `select` or `option`
         const disabledElements = ['input', 'textarea', 'select', 'option', 'button'];
@@ -87,6 +87,7 @@ export default function sortableContainer(WrappedComponent, config = {withRef: f
       shouldCancelStart: PropTypes.func,
       pressDelay: PropTypes.number,
       useDragHandle: PropTypes.bool,
+      animateNodes: PropTypes.bool,
       useWindowAsScrollContainer: PropTypes.bool,
       hideSortableGhost: PropTypes.bool,
       lockToContainerEdges: PropTypes.bool,
@@ -522,59 +523,9 @@ export default function sortableContainer(WrappedComponent, config = {withRef: f
       return true;
     };
 
-    updatePosition(event) {
-      const {lockAxis, lockToContainerEdges} = this.currentList.props;
-
-      const offset = getPosition(event);
-      const translate = {
-        x: offset.x - this.initialOffset.x,
-        y: offset.y - this.initialOffset.y,
-      };
-
-      // Adjust for window scroll
-      translate.y -= (window.pageYOffset - this.currentList.initialWindowScroll.top);
-      translate.x -= (window.pageXOffset - this.currentList.initialWindowScroll.left);
-
-      this.translate = translate;
-      this.delta = offset;
-
-      if (lockToContainerEdges) {
-        const [minLockOffset, maxLockOffset] = this.getLockPixelOffsets();
-        const minOffset = {
-          x: this.width / 2 - minLockOffset.x,
-          y: this.height / 2 - minLockOffset.y,
-        };
-        const maxOffset = {
-          x: this.width / 2 - maxLockOffset.x,
-          y: this.height / 2 - maxLockOffset.y,
-        };
-
-        translate.x = limit(
-          this.minTranslate.x + minOffset.x,
-          this.maxTranslate.x - maxOffset.x,
-          translate.x
-        );
-        translate.y = limit(
-          this.minTranslate.y + minOffset.y,
-          this.maxTranslate.y - maxOffset.y,
-          translate.y
-        );
-      }
-
-      if (lockAxis === 'x') {
-        translate.y = 0;
-      } else if (lockAxis === 'y') {
-        translate.x = 0;
-      }
-
-      this.helper.style[
-        `${vendorPrefix}Transform`
-      ] = `translate3d(${translate.x}px,${translate.y}px, 0)`;
-    }
-
     animateNodes() {
       if (!this.axis) return;
-      const {transitionDuration, hideSortableGhost, onSortOver} = this.props;
+      const {transitionDuration, hideSortableGhost, onSortOver, animateNodes} = this.props;
       const nodes = this.manager.getOrderedRefs();
       const containerScrollDelta = {
         left: this.container.scrollLeft - this.initialScroll.left,
@@ -617,29 +568,29 @@ export default function sortableContainer(WrappedComponent, config = {withRef: f
         };
         let {edgeOffset} = nodes[i];
 
-        // If we haven't cached the node's offsetTop / offsetLeft value
+          // If we haven't cached the node's offsetTop / offsetLeft value
         if (!edgeOffset) {
           nodes[i].edgeOffset = (edgeOffset = getEdgeOffset(node, this.container));
         }
 
-        // Get a reference to the next and previous node
+          // Get a reference to the next and previous node
         const nextNode = i < nodes.length - 1 && nodes[i + 1];
         const prevNode = i > 0 && nodes[i - 1];
 
-        // Also cache the next node's edge offset if needed.
-        // We need this for calculating the animation in a grid setup
+          // Also cache the next node's edge offset if needed.
+          // We need this for calculating the animation in a grid setup
         if (nextNode && !nextNode.edgeOffset) {
           nextNode.edgeOffset = getEdgeOffset(nextNode.node, this.container);
         }
 
-        // If the node is the one we're currently animating, skip it
+          // If the node is the one we're currently animating, skip it
         if (index === this.index) {
           if (hideSortableGhost) {
-            /*
-						 * With windowing libraries such as `react-virtualized`, the sortableGhost
-						 * node may change while scrolling down and then back up (or vice-versa),
-						 * so we need to update the reference to the new node just to be safe.
-						 */
+              /*
+               * With windowing libraries such as `react-virtualized`, the sortableGhost
+               * node may change while scrolling down and then back up (or vice-versa),
+               * so we need to update the reference to the new node just to be safe.
+               */
             this.sortableGhost = node;
             node.style.visibility = 'hidden';
             node.style.opacity = 0;
@@ -649,29 +600,29 @@ export default function sortableContainer(WrappedComponent, config = {withRef: f
 
         if (transitionDuration) {
           node.style[
-            `${vendorPrefix}TransitionDuration`
-          ] = `${transitionDuration}ms`;
+              `${vendorPrefix}TransitionDuration`
+              ] = `${transitionDuration}ms`;
         }
 
         if (this.axis.x) {
           if (this.axis.y) {
             // Calculations for a grid setup
             if (
-              index < this.index &&
-              (
-                ((sortingOffset.left + windowScrollDelta.left) - offset.width <= edgeOffset.left &&
-                (sortingOffset.top + windowScrollDelta.top) <= edgeOffset.top + offset.height) ||
-                (sortingOffset.top + windowScrollDelta.top) + offset.height <= edgeOffset.top
-              )
-            ) {
+                index < this.index &&
+                (
+                  ((sortingOffset.left + windowScrollDelta.left) - offset.width <= edgeOffset.left &&
+                    (sortingOffset.top + windowScrollDelta.top) <= edgeOffset.top + offset.height) ||
+                  (sortingOffset.top + windowScrollDelta.top) + offset.height <= edgeOffset.top
+                )
+              ) {
               // If the current node is to the left on the same row, or above the node that's being dragged
               // then move it to the right
               translate.x = this.dragLayer.width +
-                this.dragLayer.marginOffset.x;
+                  this.dragLayer.marginOffset.x;
               if (
-                edgeOffset.left + translate.x >
-                this.dragLayer.containerBoundingRect.width - offset.width
-              ) {
+                  edgeOffset.left + translate.x >
+                  this.dragLayer.containerBoundingRect.width - offset.width
+                ) {
                 // If it moves passed the right bounds, then animate it to the first position of the next row.
                 // We just use the offset of the next node to calculate where to move, because that node's original position
                 // is exactly where we want to go
@@ -682,21 +633,21 @@ export default function sortableContainer(WrappedComponent, config = {withRef: f
                 this.newIndex = index;
               }
             } else if (
-              index > this.index &&
-              (
-                ((sortingOffset.left + windowScrollDelta.left) + offset.width >= edgeOffset.left &&
-                (sortingOffset.top + windowScrollDelta.top) + offset.height >= edgeOffset.top) ||
-                (sortingOffset.top + windowScrollDelta.top) + offset.height >= edgeOffset.top + height
-              )
-            ) {
+                index > this.index &&
+                (
+                  ((sortingOffset.left + windowScrollDelta.left) + offset.width >= edgeOffset.left &&
+                    (sortingOffset.top + windowScrollDelta.top) + offset.height >= edgeOffset.top) ||
+                  (sortingOffset.top + windowScrollDelta.top) + offset.height >= edgeOffset.top + height
+                )
+              ) {
               // If the current node is to the right on the same row, or below the node that's being dragged
               // then move it to the left
               translate.x = -(this.dragLayer.width +
-                this.dragLayer.marginOffset.x);
+                  this.dragLayer.marginOffset.x);
               if (
-                edgeOffset.left + translate.x <
-                this.dragLayer.containerBoundingRect.left + offset.width
-              ) {
+                  edgeOffset.left + translate.x <
+                  this.dragLayer.containerBoundingRect.left + offset.width
+                ) {
                 // If it moves passed the left bounds, then animate it to the last position of the previous row.
                 // We just use the offset of the previous node to calculate where to move, because that node's original position
                 // is exactly where we want to go
@@ -707,18 +658,18 @@ export default function sortableContainer(WrappedComponent, config = {withRef: f
             }
           } else {
             if (
-              index > this.index &&
-              (sortingOffset.left + windowScrollDelta.left) + offset.width >= edgeOffset.left
-            ) {
+                index > this.index &&
+                (sortingOffset.left + windowScrollDelta.left) + offset.width >= edgeOffset.left
+              ) {
               translate.x = -(this.dragLayer.width +
-                this.dragLayer.marginOffset.x);
+                  this.dragLayer.marginOffset.x);
               this.newIndex = index;
             } else if (
-              index < this.index &&
-              (sortingOffset.left + windowScrollDelta.left) <= edgeOffset.left + offset.width
-            ) {
+                index < this.index &&
+                (sortingOffset.left + windowScrollDelta.left) <= edgeOffset.left + offset.width
+              ) {
               translate.x = this.dragLayer.width +
-                this.dragLayer.marginOffset.x;
+                  this.dragLayer.marginOffset.x;
 
               if (this.newIndex == null) {
                 this.newIndex = index;
@@ -727,25 +678,29 @@ export default function sortableContainer(WrappedComponent, config = {withRef: f
           }
         } else if (this.axis.y) {
           if (
-            index > this.index &&
-            (sortingOffset.top + windowScrollDelta.top) + offset.height >= edgeOffset.top
-          ) {
+              index > this.index &&
+              (sortingOffset.top + windowScrollDelta.top) + offset.height >= edgeOffset.top
+            ) {
             translate.y = -(this.dragLayer.height +
-              this.dragLayer.marginOffset.y);
+                this.dragLayer.marginOffset.y);
             this.newIndex = index;
           } else if (
-            index < this.index &&
-            (sortingOffset.top + windowScrollDelta.top) <= edgeOffset.top + offset.height
-          ) {
+              index < this.index &&
+              (sortingOffset.top + windowScrollDelta.top) <= edgeOffset.top + offset.height
+            ) {
             translate.y = this.dragLayer.height + this.dragLayer.marginOffset.y;
             if (this.newIndex == null) {
               this.newIndex = index;
             }
           }
         }
-        node.style[
-          `${vendorPrefix}Transform`
-        ] = `translate3d(${translate.x}px,${translate.y}px,0)`;
+
+        // Translate the position of the given node
+        if (animateNodes) {
+          node.style[
+            `${vendorPrefix}Transform`
+            ] = `translate3d(${translate.x}px,${translate.y}px,0)`;
+        }
       }
 
       if (this.newIndex == null) {
@@ -880,6 +835,7 @@ export default function sortableContainer(WrappedComponent, config = {withRef: f
             'hideSortableGhost',
             'transitionDuration',
             'useDragHandle',
+            'animateNodes',
             'pressDelay',
             'pressThreshold',
             'shouldCancelStart',

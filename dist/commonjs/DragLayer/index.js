@@ -27,16 +27,16 @@ var DragLayer = function () {
     this.helper = null;
     this.lists = [];
 
-    this.handleSortMove = function (e) {
-      e.preventDefault(); // Prevent scrolling on mobile
-      _this.updatePosition(e);
-      _this.updateTargetContainer(e);
+    this.handleSortMove = function (event) {
+      event.preventDefault(); // Prevent scrolling on mobile
+      _this.updatePosition(event);
+      _this.updateTargetContainer(event);
       if (_this.currentList) {
-        _this.currentList.handleSortMove(e);
+        _this.currentList.handleSortMove(event);
       }
     };
 
-    this.handleSortEnd = function (e) {
+    this.handleSortEnd = function (event) {
       if (_this.listenerNode) {
         _utils.events.move.forEach(function (eventName) {
           return _this.listenerNode.removeEventListener(eventName, _this.handleSortMove);
@@ -53,7 +53,7 @@ var DragLayer = function () {
       if (_this.helper) {
         _this.helper.parentNode.removeChild(_this.helper);
         _this.helper = null;
-        _this.currentList.handleSortEnd(e);
+        _this.currentList.handleSortEnd(event);
       }
     };
   }
@@ -90,10 +90,10 @@ var DragLayer = function () {
     }
   }, {
     key: 'startDrag',
-    value: function startDrag(parent, list, e) {
+    value: function startDrag(parent, list, event) {
       var _this2 = this;
 
-      var offset = (0, _utils.getPosition)(e);
+      var position = (0, _utils.getPosition)(event);
       var activeNode = list.manager.getActive();
 
       if (activeNode) {
@@ -124,7 +124,7 @@ var DragLayer = function () {
         };
         this.offsetEdge = (0, _utils.getEdgeOffset)(node, list.container);
 
-        this.initialOffset = offset;
+        this.initialOffset = position;
         this.distanceBetweenContainers = {
           x: 0,
           y: 0
@@ -157,7 +157,7 @@ var DragLayer = function () {
 
         this.setTranslateBoundaries(containerBoundingRect, list);
 
-        this.listenerNode = e.touches ? node : list.contentWindow;
+        this.listenerNode = event.touches ? node : list.contentWindow;
         _utils.events.move.forEach(function (eventName) {
           return _this2.listenerNode.addEventListener(eventName, _this2.handleSortMove, false);
         });
@@ -176,22 +176,22 @@ var DragLayer = function () {
     }
   }, {
     key: 'updatePosition',
-    value: function updatePosition(e) {
+    value: function updatePosition(event) {
       var _currentList$props = this.currentList.props,
           lockAxis = _currentList$props.lockAxis,
           lockToContainerEdges = _currentList$props.lockToContainerEdges;
 
-      var offset = (0, _utils.getPosition)(e);
+      var position = (0, _utils.getPosition)(event);
       var translate = {
-        x: offset.x - this.initialOffset.x,
-        y: offset.y - this.initialOffset.y
+        x: position.x - this.initialOffset.x,
+        y: position.y - this.initialOffset.y
       };
       // Adjust for window scroll
       translate.y -= window.pageYOffset - this.currentList.initialWindowScroll.top;
       translate.x -= window.pageXOffset - this.currentList.initialWindowScroll.left;
 
       this.translate = translate;
-      this.delta = offset;
+      this.delta = position;
 
       if (lockToContainerEdges) {
         var _currentList$getLockP = this.currentList.getLockPixelOffsets(),
@@ -222,7 +222,7 @@ var DragLayer = function () {
     }
   }, {
     key: 'updateTargetContainer',
-    value: function updateTargetContainer(e) {
+    value: function updateTargetContainer(event) {
       var _delta = this.delta,
           x = _delta.x,
           y = _delta.y;
@@ -238,13 +238,13 @@ var DragLayer = function () {
           width: this.width,
           height: this.height
         });
-        this.currentList.handleSortEnd(e, closest);
+        this.currentList.handleSortEnd(event, closest);
         this.currentList = closest;
         this.setTranslateBoundaries(closest.container.getBoundingClientRect(), closest);
-        this.currentList.manager.active = _extends({}, this.currentList.getClosestNode(e), {
+        this.currentList.manager.active = _extends({}, this.currentList.getClosestNode(event), {
           item: item
         });
-        this.currentList.handlePress(e);
+        this.currentList.handlePress(event);
       }
     }
   }]);

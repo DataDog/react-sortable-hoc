@@ -54,8 +54,8 @@ export default class DragLayer {
     }
   }
 
-  startDrag(parent, list, e) {
-    const offset = getPosition(e);
+  startDrag(parent, list, event) {
+    const position = getPosition(event);
     const activeNode = list.manager.getActive();
 
     if (activeNode) {
@@ -85,7 +85,7 @@ export default class DragLayer {
       };
       this.offsetEdge = getEdgeOffset(node, list.container);
 
-      this.initialOffset = offset;
+      this.initialOffset = position;
       this.distanceBetweenContainers = {
         x: 0,
         y: 0,
@@ -121,7 +121,7 @@ export default class DragLayer {
 
       this.setTranslateBoundaries(containerBoundingRect, list);
 
-      this.listenerNode = e.touches ? node : list.contentWindow;
+      this.listenerNode = event.touches ? node : list.contentWindow;
       events.move.forEach(eventName =>
         this.listenerNode.addEventListener(
           eventName,
@@ -144,16 +144,16 @@ export default class DragLayer {
     this.handleSortEnd();
   }
 
-  handleSortMove = e => {
-    e.preventDefault(); // Prevent scrolling on mobile
-    this.updatePosition(e);
-    this.updateTargetContainer(e);
+  handleSortMove = event => {
+    event.preventDefault(); // Prevent scrolling on mobile
+    this.updatePosition(event);
+    this.updateTargetContainer(event);
     if (this.currentList) {
-      this.currentList.handleSortMove(e);
+      this.currentList.handleSortMove(event);
     }
   };
 
-  handleSortEnd = e => {
+  handleSortEnd = event => {
     if (this.listenerNode) {
       events.move.forEach(eventName =>
         this.listenerNode.removeEventListener(eventName, this.handleSortMove));
@@ -168,23 +168,23 @@ export default class DragLayer {
     if (this.helper) {
       this.helper.parentNode.removeChild(this.helper);
       this.helper = null;
-      this.currentList.handleSortEnd(e);
+      this.currentList.handleSortEnd(event);
     }
   };
 
-  updatePosition(e) {
+  updatePosition(event) {
     const {lockAxis, lockToContainerEdges} = this.currentList.props;
-    const offset = getPosition(e);
+    const position = getPosition(event);
     const translate = {
-      x: offset.x - this.initialOffset.x,
-      y: offset.y - this.initialOffset.y,
+      x: position.x - this.initialOffset.x,
+      y: position.y - this.initialOffset.y,
     };
     // Adjust for window scroll
     translate.y -= (window.pageYOffset - this.currentList.initialWindowScroll.top);
     translate.x -= (window.pageXOffset - this.currentList.initialWindowScroll.left);
 
     this.translate = translate;
-    this.delta = offset;
+    this.delta = position;
 
     if (lockToContainerEdges) {
       const [
@@ -223,7 +223,7 @@ export default class DragLayer {
     ] = `translate3d(${translate.x}px,${translate.y}px, 0)`;
   }
 
-  updateTargetContainer(e) {
+  updateTargetContainer(event) {
     const {x, y} = this.delta;
     const closest = this.lists[
       closestRect(x, y, this.lists.map(l => l.container))
@@ -240,17 +240,17 @@ export default class DragLayer {
           height: this.height,
         },
       );
-      this.currentList.handleSortEnd(e, closest);
+      this.currentList.handleSortEnd(event, closest);
       this.currentList = closest;
       this.setTranslateBoundaries(
         closest.container.getBoundingClientRect(),
         closest,
       );
       this.currentList.manager.active = {
-        ...this.currentList.getClosestNode(e),
+        ...this.currentList.getClosestNode(event),
         item,
       };
-      this.currentList.handlePress(e);
+      this.currentList.handlePress(event);
     }
   }
 }
