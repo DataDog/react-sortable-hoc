@@ -55,6 +55,14 @@ var DragLayer = function () {
         _this.helper = null;
         _this.currentList.handleSortEnd(event);
       }
+
+      // Reset window scroll & container height diff
+      _this.lists.forEach(function (list) {
+        delete list.initialWindowScroll;
+      });
+
+      // Reset container height diff
+      _this.totalContainerHeightDelta = 0;
     };
   }
 
@@ -129,6 +137,10 @@ var DragLayer = function () {
           x: 0,
           y: 0
         };
+
+        // When dragging up, any change in height in the target container must
+        // be accounted for
+        this.totalContainerHeightDelta = 0;
 
         var fields = node.querySelectorAll('input, textarea, select, canvas');
         var clonedNode = node.cloneNode(true);
@@ -227,24 +239,51 @@ var DragLayer = function () {
           x = _delta.x,
           y = _delta.y;
 
-      var closest = this.lists[(0, _utils2.closestRect)(x, y, this.lists.map(function (l) {
+      var originList = this.currentList;
+      var targetList = this.lists[(0, _utils2.closestRect)(x, y, this.lists.map(function (l) {
         return l.container;
       }))];
       var item = this.currentList.manager.active.item;
 
       this.active = item;
-      if (closest !== this.currentList) {
-        this.distanceBetweenContainers = (0, _utils2.updateDistanceBetweenContainers)(this.distanceBetweenContainers, closest, this.currentList, {
-          width: this.width,
-          height: this.height
-        });
-        this.currentList.handleSortEnd(event, closest);
-        this.currentList = closest;
-        this.setTranslateBoundaries(closest.container.getBoundingClientRect(), closest);
+      if (targetList !== originList) {
+        this.currentList = targetList;
+
+        // Store scroll and heights before callbacks have been executed
+        var originListInitialWindowScroll = originList.initialWindowScroll;
+        var originListContainerHeight = originList.container.getBoundingClientRect().height;
+        var currentListContainerHeight = this.currentList.container.getBoundingClientRect().height;
+
+        originList.handleSortEnd(event, this.currentList);
+
+        this.setTranslateBoundaries(this.currentList.container.getBoundingClientRect(), this.currentList);
         this.currentList.manager.active = _extends({}, this.currentList.getClosestNode(event), {
           item: item
         });
         this.currentList.handlePress(event);
+
+        // Override initial scroll to use scroll of origin list
+        this.currentList.initialWindowScroll = originListInitialWindowScroll;
+        this.distanceBetweenContainers = (0, _utils2.updateDistanceBetweenContainers)(this.distanceBetweenContainers, this.currentList, originList);
+
+        // Take account of changes in container height when dragging up
+        var originListRect = originList.container.getBoundingClientRect();
+        var currentListRect = this.currentList.container.getBoundingClientRect();
+        var newOriginListContainerHeight = originListRect.height;
+        var newCurrentListContainerHeight = currentListRect.height;
+
+        // If we're dragging up, calculate any height change in the current list container and add it to the
+        // y distance. We collect the total height change during a drop operation so we know when we have
+        // to subtract height changes as we drag downwards. This is to accommodate DND operations that may
+        // add or subtract height from multiple lists as the user moves up and down, before the destination list is chosen.
+        if (currentListRect.top < originListRect.top) {
+          var currentListContainerHeightDelta = Math.abs(currentListContainerHeight - newCurrentListContainerHeight);
+          this.totalContainerHeightDelta += currentListContainerHeightDelta;
+          this.distanceBetweenContainers.y += currentListContainerHeightDelta;
+        } else if (currentListRect.top > originListRect.top && this.totalContainerHeightDelta > 0) {
+          var originContainerHeightDelta = Math.abs(newOriginListContainerHeight - originListContainerHeight);
+          this.totalContainerHeightDelta -= originContainerHeightDelta;
+        }
       }
     }
   }]);

@@ -91,6 +91,10 @@ export default class DragLayer {
         y: 0,
       };
 
+      // When dragging up, any change in height in the target container must
+      // be accounted for
+      this.totalContainerHeightDelta = 0;
+
       const fields = node.querySelectorAll('input, textarea, select, canvas');
       const clonedNode = node.cloneNode(true);
       const clonedFields = [
@@ -170,6 +174,14 @@ export default class DragLayer {
       this.helper = null;
       this.currentList.handleSortEnd(event);
     }
+
+    // Reset window scroll & container height diff
+    this.lists.forEach(list => {
+      delete list.initialWindowScroll;
+    });
+
+    // Reset container height diff
+    this.totalContainerHeightDelta = 0;
   };
 
   updatePosition(event) {
@@ -225,32 +237,58 @@ export default class DragLayer {
 
   updateTargetContainer(event) {
     const {x, y} = this.delta;
-    const closest = this.lists[
+    const originList = this.currentList;
+    const targetList = this.lists[
       closestRect(x, y, this.lists.map(l => l.container))
     ];
     const {item} = this.currentList.manager.active;
     this.active = item;
-    if (closest !== this.currentList) {
-      this.distanceBetweenContainers = updateDistanceBetweenContainers(
-        this.distanceBetweenContainers,
-        closest,
-        this.currentList,
-        {
-          width: this.width,
-          height: this.height,
-        },
-      );
-      this.currentList.handleSortEnd(event, closest);
-      this.currentList = closest;
+    if (targetList !== originList) {
+      this.currentList = targetList;
+
+      // Store scroll and heights before callbacks have been executed
+      const originListInitialWindowScroll = originList.initialWindowScroll;
+      const originListContainerHeight = originList.container.getBoundingClientRect().height;
+      const currentListContainerHeight = this.currentList.container.getBoundingClientRect().height;
+
+      originList.handleSortEnd(event, this.currentList);
+
       this.setTranslateBoundaries(
-        closest.container.getBoundingClientRect(),
-        closest,
+        this.currentList.container.getBoundingClientRect(),
+        this.currentList,
       );
       this.currentList.manager.active = {
         ...this.currentList.getClosestNode(event),
         item,
       };
       this.currentList.handlePress(event);
+
+      // Override initial scroll to use scroll of origin list
+      this.currentList.initialWindowScroll = originListInitialWindowScroll;
+      this.distanceBetweenContainers = updateDistanceBetweenContainers(
+        this.distanceBetweenContainers,
+        this.currentList,
+        originList
+      );
+
+      // Take account of changes in container height when dragging up
+      const originListRect = originList.container.getBoundingClientRect();
+      const currentListRect = this.currentList.container.getBoundingClientRect();
+      const newOriginListContainerHeight = originListRect.height;
+      const newCurrentListContainerHeight = currentListRect.height;
+
+      // If we're dragging up, calculate any height change in the current list container and add it to the
+      // y distance. We collect the total height change during a drop operation so we know when we have
+      // to subtract height changes as we drag downwards. This is to accommodate DND operations that may
+      // add or subtract height from multiple lists as the user moves up and down, before the destination list is chosen.
+      if (currentListRect.top < originListRect.top) {
+        const currentListContainerHeightDelta = Math.abs(currentListContainerHeight - newCurrentListContainerHeight);
+        this.totalContainerHeightDelta += currentListContainerHeightDelta;
+        this.distanceBetweenContainers.y += currentListContainerHeightDelta;
+      } else if (currentListRect.top > originListRect.top && this.totalContainerHeightDelta > 0) {
+        const originContainerHeightDelta = Math.abs(newOriginListContainerHeight - originListContainerHeight);
+        this.totalContainerHeightDelta -= originContainerHeightDelta;
+      }
     }
   }
 }
