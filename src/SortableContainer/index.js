@@ -263,18 +263,16 @@ export default function sortableContainer(WrappedComponent, config = {withRef: f
     };
 
     handleEnd = () => {
-      const {distance} = this.props;
-
       this._touched = false;
-
-      if (!distance) {
-        this.cancel();
-      }
+      this.cancel();
     };
 
     cancel = () => {
+      const { distance } = this.props;
       if (!this.sorting) {
-        clearTimeout(this.pressTimer);
+        if (!distance) {
+          clearTimeout(this.pressTimer);
+        }
         this.manager.active = null;
       }
     };
