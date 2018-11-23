@@ -172,19 +172,17 @@ function sortableContainer(WrappedComponent) {
       };
 
       _this.handleEnd = function () {
-        var distance = _this.props.distance;
-
-
         _this._touched = false;
-
-        if (!distance) {
-          _this.cancel();
-        }
+        _this.cancel();
       };
 
       _this.cancel = function () {
+        var distance = _this.props.distance;
+
         if (!_this.sorting) {
-          clearTimeout(_this.pressTimer);
+          if (!distance) {
+            clearTimeout(_this.pressTimer);
+          }
           _this.manager.active = null;
         }
       };
