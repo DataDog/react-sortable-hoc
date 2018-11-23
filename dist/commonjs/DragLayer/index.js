@@ -31,8 +31,8 @@ var DragLayer = function () {
       event.preventDefault(); // Prevent scrolling on mobile
       _this.updatePosition(event);
       _this.updateTargetContainer(event);
-      if (_this.currentList) {
-        _this.currentList.handleSortMove(event);
+      if (_this.targetList) {
+        _this.targetList.handleSortMove(event);
       }
     };
 
@@ -53,16 +53,13 @@ var DragLayer = function () {
       if (_this.helper) {
         _this.helper.parentNode.removeChild(_this.helper);
         _this.helper = null;
-        _this.currentList.handleSortEnd(event);
+        _this.targetList.handleSortEnd(event);
       }
 
       // Reset window scroll & container height diff
       _this.lists.forEach(function (list) {
         delete list.initialWindowScroll;
       });
-
-      // Reset container height diff
-      _this.totalContainerHeightDelta = 0;
     };
   }
 
@@ -124,7 +121,7 @@ var DragLayer = function () {
         };
         this.boundingClientRect = node.getBoundingClientRect();
         this.containerBoundingRect = containerBoundingRect;
-        this.currentList = list;
+        this.targetList = list;
 
         this.axis = {
           x: axis.indexOf('x') >= 0,
@@ -137,10 +134,6 @@ var DragLayer = function () {
           x: 0,
           y: 0
         };
-
-        // When dragging up, any change in height in the target container must
-        // be accounted for
-        this.totalContainerHeightDelta = 0;
 
         var fields = node.querySelectorAll('input, textarea, select, canvas');
         var clonedNode = node.cloneNode(true);
@@ -189,9 +182,9 @@ var DragLayer = function () {
   }, {
     key: 'updatePosition',
     value: function updatePosition(event) {
-      var _currentList$props = this.currentList.props,
-          lockAxis = _currentList$props.lockAxis,
-          lockToContainerEdges = _currentList$props.lockToContainerEdges;
+      var _targetList$props = this.targetList.props,
+          lockAxis = _targetList$props.lockAxis,
+          lockToContainerEdges = _targetList$props.lockToContainerEdges;
 
       var position = (0, _utils.getPosition)(event);
       var translate = {
@@ -199,17 +192,17 @@ var DragLayer = function () {
         y: position.y - this.initialOffset.y
       };
       // Adjust for window scroll
-      translate.y -= window.pageYOffset - this.currentList.initialWindowScroll.top;
-      translate.x -= window.pageXOffset - this.currentList.initialWindowScroll.left;
+      translate.y -= window.pageYOffset - this.targetList.initialWindowScroll.top;
+      translate.x -= window.pageXOffset - this.targetList.initialWindowScroll.left;
 
       this.translate = translate;
       this.delta = position;
 
       if (lockToContainerEdges) {
-        var _currentList$getLockP = this.currentList.getLockPixelOffsets(),
-            _currentList$getLockP2 = _slicedToArray(_currentList$getLockP, 2),
-            minLockOffset = _currentList$getLockP2[0],
-            maxLockOffset = _currentList$getLockP2[1];
+        var _targetList$getLockPi = this.targetList.getLockPixelOffsets(),
+            _targetList$getLockPi2 = _slicedToArray(_targetList$getLockPi, 2),
+            minLockOffset = _targetList$getLockPi2[0],
+            maxLockOffset = _targetList$getLockPi2[1];
 
         var minOffset = {
           x: this.width / 2 - minLockOffset.x,
@@ -239,50 +232,43 @@ var DragLayer = function () {
           x = _delta.x,
           y = _delta.y;
 
-      var originList = this.currentList;
+      var originList = this.targetList;
       var targetList = this.lists[(0, _utils2.closestRect)(x, y, this.lists.map(function (l) {
         return l.container;
       }))];
-      var item = this.currentList.manager.active.item;
+      var item = this.targetList.manager.active.item;
 
       this.active = item;
       if (targetList !== originList) {
-        this.currentList = targetList;
+        this.targetList = targetList;
 
-        // Store scroll and heights before callbacks have been executed
+        // Store initial scroll and dimensions of origin list, and initial
+        // dimensions of target list. This is to later accommodate height changes
+        // in both lists when items are added or removed during the DND operation.
         var originListInitialWindowScroll = originList.initialWindowScroll;
-        var originListContainerHeight = originList.container.getBoundingClientRect().height;
-        var currentListContainerHeight = this.currentList.container.getBoundingClientRect().height;
+        var cachedOriginListRect = originList.container.getBoundingClientRect();
+        var cachedTargetListRect = targetList.container.getBoundingClientRect();
 
-        originList.handleSortEnd(event, this.currentList);
+        originList.handleSortEnd(event, targetList);
 
-        this.setTranslateBoundaries(this.currentList.container.getBoundingClientRect(), this.currentList);
-        this.currentList.manager.active = _extends({}, this.currentList.getClosestNode(event), {
+        this.setTranslateBoundaries(targetList.container.getBoundingClientRect(), targetList);
+        this.targetList.manager.active = _extends({}, targetList.getClosestNode(event), {
           item: item
         });
-        this.currentList.handlePress(event);
+        targetList.handlePress(event);
 
         // Override initial scroll to use scroll of origin list
-        this.currentList.initialWindowScroll = originListInitialWindowScroll;
-        this.distanceBetweenContainers = (0, _utils2.updateDistanceBetweenContainers)(this.distanceBetweenContainers, this.currentList, originList);
+        this.targetList.initialWindowScroll = originListInitialWindowScroll;
 
-        // Take account of changes in container height when dragging up
-        var originListRect = originList.container.getBoundingClientRect();
-        var currentListRect = this.currentList.container.getBoundingClientRect();
-        var newOriginListContainerHeight = originListRect.height;
-        var newCurrentListContainerHeight = currentListRect.height;
+        this.distanceBetweenContainers = (0, _utils2.updateDistanceBetweenContainers)(this.distanceBetweenContainers, targetList, originList);
 
-        // If we're dragging up, calculate any height change in the current list container and add it to the
-        // y distance. We collect the total height change during a drop operation so we know when we have
-        // to subtract height changes as we drag downwards. This is to accommodate DND operations that may
-        // add or subtract height from multiple lists as the user moves up and down, before the destination list is chosen.
-        if (currentListRect.top < originListRect.top) {
-          var currentListContainerHeightDelta = Math.abs(currentListContainerHeight - newCurrentListContainerHeight);
-          this.totalContainerHeightDelta += currentListContainerHeightDelta;
-          this.distanceBetweenContainers.y += currentListContainerHeightDelta;
-        } else if (currentListRect.top > originListRect.top && this.totalContainerHeightDelta > 0) {
-          var originContainerHeightDelta = Math.abs(newOriginListContainerHeight - originListContainerHeight);
-          this.totalContainerHeightDelta -= originContainerHeightDelta;
+        var targetListRect = targetList.container.getBoundingClientRect();
+
+        // If we're moving up the container ...
+        if (targetListRect.top < cachedOriginListRect.top) {
+          // Calculate any height difference that has occurred on the target container during the DND
+          var targetListContainerHeightDelta = Math.abs(cachedTargetListRect.height - targetListRect.height);
+          this.distanceBetweenContainers.y += targetListContainerHeightDelta;
         }
       }
     }
