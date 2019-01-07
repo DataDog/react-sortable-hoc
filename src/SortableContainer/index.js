@@ -92,6 +92,7 @@ export default function sortableContainer(
       helperClass: PropTypes.string,
       transitionDuration: PropTypes.number,
       contentWindow: PropTypes.any,
+      updateBeforeSortStart: PropTypes.func,
       onSortStart: PropTypes.func,
       onSortMove: PropTypes.func,
       onSortOver: PropTypes.func,
@@ -268,7 +269,11 @@ export default function sortableContainer(
 
     handleMove = (event) => {
       const {distance, pressThreshold} = this.props;
-      if (!this.sorting && this._touched) {
+      if (
+        !this.sorting &&
+        this._touched &&
+        !this._awaitingUpdateBeforeSortStart
+      ) {
         const position = getPosition(event);
         const delta = {
           x: this._pos.x - position.x,
@@ -311,7 +316,7 @@ export default function sortableContainer(
       }
     };
 
-    handlePress = (event) => {
+    handlePress = async (event) => {
       let active = null;
       if (this.dragLayer.helper) {
         if (this.manager.active) {
@@ -323,9 +328,25 @@ export default function sortableContainer(
       }
 
       if (active) {
-        const {axis, helperClass, hideSortableGhost, onSortStart} = this.props;
+        const {
+          axis,
+          helperClass,
+          hideSortableGhost,
+          updateBeforeSortStart,
+          onSortStart,
+        } = this.props;
         const {node, collection} = active;
         const {index} = node.sortableInfo;
+
+        if (typeof updateBeforeSortStart === 'function') {
+          this._awaitingUpdateBeforeSortStart = true;
+
+          try {
+            await updateBeforeSortStart({node, index, collection}, event);
+          } finally {
+            this._awaitingUpdateBeforeSortStart = false;
+          }
+        }
 
         this.index = index;
         this.newIndex = index;
@@ -898,6 +919,7 @@ export default function sortableContainer(
             'pressDelay',
             'pressThreshold',
             'shouldCancelStart',
+            'updateBeforeSortStart',
             'onSortStart',
             'onSortSwap',
             'onSortMove',
