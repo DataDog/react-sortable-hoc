@@ -115,6 +115,7 @@ export default function sortableContainer(
       ]),
       getContainer: PropTypes.func,
       getHelperDimensions: PropTypes.func,
+      helperContainer: PropTypes.instanceOf(HTMLElement),
     };
 
     static childContextTypes = {
@@ -933,6 +934,10 @@ export default function sortableContainer(
           )}
         />
       );
+    }
+
+    get helperContainer() {
+      return this.props.helperContainer || this.document.body;
     }
   };
 }
