@@ -808,9 +808,24 @@ export default function sortableContainer(
         y: 10,
       };
 
+      const {
+        scrollTop,
+        scrollLeft,
+        scrollHeight,
+        scrollWidth,
+        clientHeight,
+        clientWidth,
+      } = this.scrollContainer;
+
+      const isTop = scrollTop === 0;
+      const isBottom = scrollHeight - scrollTop - clientHeight === 0;
+      const isLeft = scrollLeft === 0;
+      const isRight = scrollWidth - scrollLeft - clientWidth === 0;
+
       if (
         translate.y >=
-        this.dragLayer.maxTranslate.y - this.dragLayer.height / 2
+          this.dragLayer.maxTranslate.y - this.dragLayer.height / 2 &&
+        !isBottom
       ) {
         // Scroll Down
         direction.y = 1;
@@ -824,7 +839,8 @@ export default function sortableContainer(
           );
       } else if (
         translate.x >=
-        this.dragLayer.maxTranslate.x - this.dragLayer.width / 2
+          this.dragLayer.maxTranslate.x - this.dragLayer.width / 2 &&
+        !isRight
       ) {
         // Scroll Right
         direction.x = 1;
@@ -838,7 +854,8 @@ export default function sortableContainer(
           );
       } else if (
         translate.y <=
-        this.dragLayer.minTranslate.y + this.dragLayer.height / 2
+          this.dragLayer.minTranslate.y + this.dragLayer.height / 2 &&
+        !isTop
       ) {
         // Scroll Up
         direction.y = -1;
@@ -852,7 +869,8 @@ export default function sortableContainer(
           );
       } else if (
         translate.x <=
-        this.dragLayer.minTranslate.x + this.dragLayer.width / 2
+          this.dragLayer.minTranslate.x + this.dragLayer.width / 2 &&
+        !isLeft
       ) {
         // Scroll Left
         direction.x = -1;
