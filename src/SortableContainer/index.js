@@ -267,12 +267,12 @@ export default function sortableContainer(
         } = this.props;
 
         const {node, collection} = active;
-        const {index} = node.sortableInfo;
 
         if (typeof updateBeforeSortStart === 'function') {
           this._awaitingUpdateBeforeSortStart = true;
 
           try {
+            const {index} = node.sortableInfo;
             await updateBeforeSortStart({collection, index, node}, event);
           } finally {
             this._awaitingUpdateBeforeSortStart = false;
