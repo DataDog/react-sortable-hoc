@@ -18,6 +18,7 @@ import {
   getEdgeOffset,
   getPosition,
   isTouchEvent,
+  NodeType,
   omit,
   provideDisplayName,
   setInlineStyles,
@@ -175,10 +176,7 @@ export default function sortableContainer(
          * prevent subsequent 'mousemove' events from being fired
          * (see https://github.com/clauderic/react-sortable-hoc/issues/118)
          */
-        if (
-          !isTouchEvent(event) &&
-          event.target.tagName.toLowerCase() === 'a'
-        ) {
+        if (!isTouchEvent(event) && event.target.tagName === NodeType.Anchor) {
           event.preventDefault();
         }
 
