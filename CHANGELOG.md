@@ -2,6 +2,30 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+<a name="1.7.1"></a>
+
+## [1.7.1](https://github.com/clauderic/react-sortable-hoc/compare/v1.1.0...v1.7.1) (2019-03-06)
+
+### Bug Fixes
+
+- updated the behaviour of disabled elements ([bd3d041](https://github.com/clauderic/react-sortable-hoc/commit/bd3d041))
+
+<a name="1.7.0"></a>
+
+# [1.7.0](https://github.com/clauderic/react-sortable-hoc/compare/v1.1.0...v1.7.0) (2019-03-06)
+
+### Bug Fixes
+
+- updated the behaviour of disabled elements ([bd3d041](https://github.com/clauderic/react-sortable-hoc/commit/bd3d041))
+
+<a name="1.6.1"></a>
+
+## [1.6.1](https://github.com/clauderic/react-sortable-hoc/compare/v1.6.0...v1.6.1) (2019-02-11)
+
+### Bug Fixes
+
+- omit disableAutoscroll prop ([#502](https://github.com/clauderic/react-sortable-hoc/issues/502)) ([e994e73](https://github.com/clauderic/react-sortable-hoc/commit/e994e73))
+
 <a name="1.6.0"></a>
 
 # [1.6.0](https://github.com/clauderic/react-sortable-hoc/compare/v1.5.3...v1.6.0) (2019-02-07)
