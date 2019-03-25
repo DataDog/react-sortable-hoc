@@ -1451,6 +1451,8 @@
         );
         WithSortableContainer.prototype.constructor = WithSortableContainer;
 
+        var prototypeAccessors = {helperContainer: {configurable: true}};
+
         WithSortableContainer.prototype.getChildContext = function getChildContext() {
           return {
             manager: this.manager,
@@ -1850,6 +1852,15 @@
           );
         };
 
+        prototypeAccessors.helperContainer.get = function() {
+          return this.props.helperContainer || this.document.body;
+        };
+
+        Object.defineProperties(
+          WithSortableContainer.prototype,
+          prototypeAccessors,
+        );
+
         return WithSortableContainer;
       })(React.Component)),
       (_class.displayName = provideDisplayName(
@@ -1928,6 +1939,7 @@
         ]),
         getContainer: PropTypes.func,
         getHelperDimensions: PropTypes.func,
+        helperContainer: PropTypes.instanceOf(HTMLElement),
       }),
       (_class.childContextTypes = {
         manager: PropTypes.object.isRequired,

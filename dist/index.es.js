@@ -1390,6 +1390,8 @@ function sortableContainer(WrappedComponent, config) {
       );
       WithSortableContainer.prototype.constructor = WithSortableContainer;
 
+      var prototypeAccessors = {helperContainer: {configurable: true}};
+
       WithSortableContainer.prototype.getChildContext = function getChildContext() {
         return {
           manager: this.manager,
@@ -1780,6 +1782,15 @@ function sortableContainer(WrappedComponent, config) {
         );
       };
 
+      prototypeAccessors.helperContainer.get = function() {
+        return this.props.helperContainer || this.document.body;
+      };
+
+      Object.defineProperties(
+        WithSortableContainer.prototype,
+        prototypeAccessors,
+      );
+
       return WithSortableContainer;
     })(Component)),
     (_class.displayName = provideDisplayName('sortableList', WrappedComponent)),
@@ -1855,6 +1866,7 @@ function sortableContainer(WrappedComponent, config) {
       ]),
       getContainer: PropTypes.func,
       getHelperDimensions: PropTypes.func,
+      helperContainer: PropTypes.instanceOf(HTMLElement),
     }),
     (_class.childContextTypes = {
       manager: PropTypes.object.isRequired,
