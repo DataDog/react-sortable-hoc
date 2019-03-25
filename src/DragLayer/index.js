@@ -1,10 +1,12 @@
 import {
   events,
-  vendorPrefix,
   getPosition,
   getElementMargin,
   getEdgeOffset,
+  getLockPixelOffsets,
   limit,
+  setInlineStyles,
+  setTranslate3d,
   NodeType,
 } from '../utils';
 import {closestRect, updateDistanceBetweenContainers} from './utils';
@@ -101,13 +103,15 @@ export default class DragLayer {
       const {index} = node.sortableInfo;
       const margin = getElementMargin(node);
       const containerBoundingRect = list.scrollContainer.getBoundingClientRect();
-      const dimensions = getHelperDimensions({index, node, collection});
+      const dimensions = getHelperDimensions({collection, index, node});
 
+      this.node = node;
+      this.margin = margin;
       this.width = dimensions.width;
       this.height = dimensions.height;
       this.marginOffset = {
-        x: margin.left + margin.right,
-        y: Math.max(margin.top, margin.bottom),
+        x: this.margin.left + this.margin.right,
+        y: Math.max(this.margin.top, this.margin.bottom),
       };
       this.boundingClientRect = node.getBoundingClientRect();
       this.containerBoundingRect = containerBoundingRect;
@@ -146,14 +150,15 @@ export default class DragLayer {
 
       this.helper = parent.appendChild(clonedNode);
 
-      this.helper.style.position = 'fixed';
-      this.helper.style.top = `${this.boundingClientRect.top - margin.top}px`;
-      this.helper.style.left = `${this.boundingClientRect.left -
-        margin.left}px`;
-      this.helper.style.width = `${this.width}px`;
-      this.helper.style.height = `${this.height}px`;
-      this.helper.style.boxSizing = 'border-box';
-      this.helper.style.pointerEvents = 'none';
+      setInlineStyles(this.helper, {
+        boxSizing: 'border-box',
+        height: `${this.height}px`,
+        left: `${this.boundingClientRect.left - margin.left}px`,
+        pointerEvents: 'none',
+        position: 'fixed',
+        top: `${this.boundingClientRect.top - margin.top}px`,
+        width: `${this.width}px`,
+      });
 
       this.setTranslateBoundaries(containerBoundingRect, list);
 
@@ -183,7 +188,7 @@ export default class DragLayer {
   }
 
   updatePosition(event) {
-    const {lockAxis, lockToContainerEdges} = this.targetList.props;
+    const {lockAxis, lockOffset, lockToContainerEdges} = this.targetList.props;
     const offset = getPosition(event);
     const translate = {
       x: offset.x - this.initialOffset.x,
@@ -198,10 +203,11 @@ export default class DragLayer {
     this.delta = offset;
 
     if (lockToContainerEdges) {
-      const [
-        minLockOffset,
-        maxLockOffset,
-      ] = this.targetList.getLockPixelOffsets();
+      const [minLockOffset, maxLockOffset] = getLockPixelOffsets({
+        height: this.height,
+        lockOffset,
+        width: this.width,
+      });
       const minOffset = {
         x: this.width / 2 - minLockOffset.x,
         y: this.height / 2 - minLockOffset.y,
@@ -229,9 +235,7 @@ export default class DragLayer {
       translate.x = 0;
     }
 
-    this.helper.style[`${vendorPrefix}Transform`] = `translate3d(${
-      translate.x
-    }px,${translate.y}px, 0)`;
+    setTranslate3d(this.helper, translate);
   }
 
   updateTargetContainer(event) {

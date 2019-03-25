@@ -60,58 +60,6 @@
     module.exports = _extends;
   });
 
-  function _arrayWithHoles(arr) {
-    if (Array.isArray(arr)) return arr;
-  }
-
-  var arrayWithHoles = _arrayWithHoles;
-
-  function _iterableToArrayLimit(arr, i) {
-    var _arr = [];
-    var _n = true;
-    var _d = false;
-    var _e = undefined;
-
-    try {
-      for (
-        var _i = arr[Symbol.iterator](), _s;
-        !(_n = (_s = _i.next()).done);
-        _n = true
-      ) {
-        _arr.push(_s.value);
-
-        if (i && _arr.length === i) break;
-      }
-    } catch (err) {
-      _d = true;
-      _e = err;
-    } finally {
-      try {
-        if (!_n && _i['return'] != null) _i['return']();
-      } finally {
-        if (_d) throw _e;
-      }
-    }
-
-    return _arr;
-  }
-
-  var iterableToArrayLimit = _iterableToArrayLimit;
-
-  function _nonIterableRest() {
-    throw new TypeError('Invalid attempt to destructure non-iterable instance');
-  }
-
-  var nonIterableRest = _nonIterableRest;
-
-  function _slicedToArray(arr, i) {
-    return (
-      arrayWithHoles(arr) || iterableToArrayLimit(arr, i) || nonIterableRest()
-    );
-  }
-
-  var slicedToArray = _slicedToArray;
-
   function _arrayWithoutHoles(arr) {
     if (Array.isArray(arr)) {
       for (var i = 0, arr2 = new Array(arr.length); i < arr.length; i++) {
@@ -3688,6 +3636,58 @@
 
   var objectSpread = _objectSpread;
 
+  function _arrayWithHoles(arr) {
+    if (Array.isArray(arr)) return arr;
+  }
+
+  var arrayWithHoles = _arrayWithHoles;
+
+  function _iterableToArrayLimit(arr, i) {
+    var _arr = [];
+    var _n = true;
+    var _d = false;
+    var _e = undefined;
+
+    try {
+      for (
+        var _i = arr[Symbol.iterator](), _s;
+        !(_n = (_s = _i.next()).done);
+        _n = true
+      ) {
+        _arr.push(_s.value);
+
+        if (i && _arr.length === i) break;
+      }
+    } catch (err) {
+      _d = true;
+      _e = err;
+    } finally {
+      try {
+        if (!_n && _i['return'] != null) _i['return']();
+      } finally {
+        if (_d) throw _e;
+      }
+    }
+
+    return _arr;
+  }
+
+  var iterableToArrayLimit = _iterableToArrayLimit;
+
+  function _nonIterableRest() {
+    throw new TypeError('Invalid attempt to destructure non-iterable instance');
+  }
+
+  var nonIterableRest = _nonIterableRest;
+
+  function _slicedToArray(arr, i) {
+    return (
+      arrayWithHoles(arr) || iterableToArrayLimit(arr, i) || nonIterableRest()
+    );
+  }
+
+  var slicedToArray = _slicedToArray;
+
   function arrayMove(array, from, to) {
     {
       if (typeof console !== 'undefined') {
@@ -3721,9 +3721,9 @@
     }, {});
   }
   var events = {
-    start: ['touchstart', 'mousedown'],
-    move: ['touchmove', 'mousemove'],
     end: ['touchend', 'touchcancel', 'mouseup'],
+    move: ['touchmove', 'mousemove'],
+    start: ['touchstart', 'mousedown'],
   };
   var vendorPrefix = (function() {
     if (typeof window === 'undefined' || typeof document === 'undefined') {
@@ -3747,6 +3747,23 @@
         return pre && pre.length ? pre[0].toUpperCase() + pre.substr(1) : '';
     }
   })();
+  function setInlineStyles(node, styles) {
+    Object.keys(styles).forEach(function(key) {
+      node.style[key] = styles[key];
+    });
+  }
+  function setTranslate3d(node, translate) {
+    node.style[''.concat(vendorPrefix, 'Transform')] =
+      translate == null
+        ? ''
+        : 'translate3d('
+            .concat(translate.x, 'px,')
+            .concat(translate.y, 'px,0)');
+  }
+  function setTransitionDuration(node, duration) {
+    node.style[''.concat(vendorPrefix, 'TransitionDuration')] =
+      duration == null ? '' : ''.concat(duration, 'ms');
+  }
   function closest(el, fn) {
     while (el) {
       if (fn(el)) {
@@ -3773,10 +3790,10 @@
   function getElementMargin(element) {
     var style = window.getComputedStyle(element);
     return {
-      top: getPixelValue(style.marginTop),
-      right: getPixelValue(style.marginRight),
       bottom: getPixelValue(style.marginBottom),
       left: getPixelValue(style.marginLeft),
+      right: getPixelValue(style.marginRight),
+      top: getPixelValue(style.marginTop),
     };
   }
   function provideDisplayName(prefix, Component) {
@@ -3814,8 +3831,8 @@
       arguments.length > 2 && arguments[2] !== undefined
         ? arguments[2]
         : {
-            top: 0,
             left: 0,
+            top: 0,
           };
 
     if (!node) {
@@ -3823,8 +3840,8 @@
     }
 
     var nodeOffset = {
-      top: offset.top + node.offsetTop,
       left: offset.left + node.offsetLeft,
+      top: offset.top + node.offsetTop,
     };
 
     if (node.parentNode === parent) {
@@ -3833,42 +3850,36 @@
 
     return getEdgeOffset(node.parentNode, parent, nodeOffset);
   }
-  function getLockPixelOffset(_ref) {
-    var lockOffset = _ref.lockOffset,
+  function getLockPixelOffsets(_ref) {
+    var height = _ref.height,
       width = _ref.width,
-      height = _ref.height;
-    var offsetX = lockOffset;
-    var offsetY = lockOffset;
-    var unit = 'px';
-
-    if (typeof lockOffset === 'string') {
-      var match = /^[+-]?\d*(?:\.\d*)?(px|%)$/.exec(lockOffset);
-      invariant_1(
-        match !== null,
-        'lockOffset value should be a number or a string of a ' +
-          'number followed by "px" or "%". Given %s',
-        lockOffset,
-      );
-      offsetX = parseFloat(lockOffset);
-      offsetY = parseFloat(lockOffset);
-      unit = match[1];
-    }
-
+      lockOffset = _ref.lockOffset;
+    var offsets = Array.isArray(lockOffset)
+      ? lockOffset
+      : [lockOffset, lockOffset];
     invariant_1(
-      isFinite(offsetX) && isFinite(offsetY),
-      'lockOffset value should be a finite. Given %s',
+      offsets.length === 2,
+      'lockOffset prop of SortableContainer should be a single ' +
+        'value or an array of exactly two values. Given %s',
       lockOffset,
     );
 
-    if (unit === '%') {
-      offsetX = (offsetX * width) / 100;
-      offsetY = (offsetY * height) / 100;
-    }
+    var _offsets = slicedToArray(offsets, 2),
+      minLockOffset = _offsets[0],
+      maxLockOffset = _offsets[1];
 
-    return {
-      x: offsetX,
-      y: offsetY,
-    };
+    return [
+      getLockPixelOffset({
+        height: height,
+        lockOffset: minLockOffset,
+        width: width,
+      }),
+      getLockPixelOffset({
+        height: height,
+        lockOffset: maxLockOffset,
+        width: width,
+      }),
+    ];
   }
 
   function isScrollable(el) {
@@ -4073,15 +4084,17 @@
             var margin = getElementMargin(node);
             var containerBoundingRect = list.scrollContainer.getBoundingClientRect();
             var dimensions = getHelperDimensions({
+              collection: collection,
               index: index,
               node: node,
-              collection: collection,
             });
+            this.node = node;
+            this.margin = margin;
             this.width = dimensions.width;
             this.height = dimensions.height;
             this.marginOffset = {
-              x: margin.left + margin.right,
-              y: Math.max(margin.top, margin.bottom),
+              x: this.margin.left + this.margin.right,
+              y: Math.max(this.margin.top, this.margin.bottom),
             };
             this.boundingClientRect = node.getBoundingClientRect();
             this.containerBoundingRect = containerBoundingRect;
@@ -4119,19 +4132,15 @@
             }
 
             this.helper = parent.appendChild(clonedNode);
-            this.helper.style.position = 'fixed';
-            this.helper.style.top = ''.concat(
-              this.boundingClientRect.top - margin.top,
-              'px',
-            );
-            this.helper.style.left = ''.concat(
-              this.boundingClientRect.left - margin.left,
-              'px',
-            );
-            this.helper.style.width = ''.concat(this.width, 'px');
-            this.helper.style.height = ''.concat(this.height, 'px');
-            this.helper.style.boxSizing = 'border-box';
-            this.helper.style.pointerEvents = 'none';
+            setInlineStyles(this.helper, {
+              boxSizing: 'border-box',
+              height: ''.concat(this.height, 'px'),
+              left: ''.concat(this.boundingClientRect.left - margin.left, 'px'),
+              pointerEvents: 'none',
+              position: 'fixed',
+              top: ''.concat(this.boundingClientRect.top - margin.top, 'px'),
+              width: ''.concat(this.width, 'px'),
+            });
             this.setTranslateBoundaries(containerBoundingRect, list);
             this.listenerNode = event.touches ? node : list.contentWindow;
             events.move.forEach(function(eventName) {
@@ -4165,6 +4174,7 @@
         value: function updatePosition(event) {
           var _this$targetList$prop = this.targetList.props,
             lockAxis = _this$targetList$prop.lockAxis,
+            lockOffset = _this$targetList$prop.lockOffset,
             lockToContainerEdges = _this$targetList$prop.lockToContainerEdges;
           var offset = getPosition(event);
           var translate = {
@@ -4179,10 +4189,14 @@
           this.delta = offset;
 
           if (lockToContainerEdges) {
-            var _this$targetList$getL = this.targetList.getLockPixelOffsets(),
-              _this$targetList$getL2 = slicedToArray(_this$targetList$getL, 2),
-              minLockOffset = _this$targetList$getL2[0],
-              maxLockOffset = _this$targetList$getL2[1];
+            var _getLockPixelOffsets = getLockPixelOffsets({
+                height: this.height,
+                lockOffset: lockOffset,
+                width: this.width,
+              }),
+              _getLockPixelOffsets2 = slicedToArray(_getLockPixelOffsets, 2),
+              minLockOffset = _getLockPixelOffsets2[0],
+              maxLockOffset = _getLockPixelOffsets2[1];
 
             var minOffset = {
               x: this.width / 2 - minLockOffset.x,
@@ -4210,11 +4224,7 @@
             translate.x = 0;
           }
 
-          this.helper.style[
-            ''.concat(vendorPrefix, 'Transform')
-          ] = 'translate3d('
-            .concat(translate.x, 'px,')
-            .concat(translate.y, 'px, 0)');
+          setTranslate3d(this.helper, translate);
         },
       },
       {
@@ -4360,238 +4370,252 @@
     return index1 - index2;
   }
 
-  /*
-   * classList.js: Cross-browser full element.classList implementation.
-   * 1.1.20170427
-   *
-   * By Eli Grey, http://eligrey.com
-   * License: Dedicated to the public domain.
-   *   See https://github.com/eligrey/classList.js/blob/master/LICENSE.md
-   */
+  function sortableHandle(WrappedComponent) {
+    var _class, _temp;
 
-  /*global self, document, DOMException */
-
-  /*! @source http://purl.eligrey.com/github/classList.js/blob/master/classList.js */
-
-  if ('document' in window.self) {
-    // Full polyfill for browsers with no classList support
-    // Including IE < Edge missing SVGElement.classList
-    if (
-      !('classList' in document.createElement('_')) ||
-      (document.createElementNS &&
-        !(
-          'classList' in
-          document.createElementNS('http://www.w3.org/2000/svg', 'g')
-        ))
-    ) {
-      (function(view) {
-        if (!('Element' in view)) return;
-
-        var classListProp = 'classList',
-          protoProp = 'prototype',
-          elemCtrProto = view.Element[protoProp],
-          objCtr = Object,
-          strTrim =
-            String[protoProp].trim ||
-            function() {
-              return this.replace(/^\s+|\s+$/g, '');
-            },
-          arrIndexOf =
-            Array[protoProp].indexOf ||
-            function(item) {
-              var i = 0,
-                len = this.length;
-              for (; i < len; i++) {
-                if (i in this && this[i] === item) {
-                  return i;
-                }
-              }
-              return -1;
-            },
-          // Vendors: please allow content code to instantiate DOMExceptions
-          DOMEx = function(type, message) {
-            this.name = type;
-            this.code = DOMException[type];
-            this.message = message;
-          },
-          checkTokenAndGetIndex = function(classList, token) {
-            if (token === '') {
-              throw new DOMEx(
-                'SYNTAX_ERR',
-                'An invalid or illegal string was specified',
-              );
-            }
-            if (/\s/.test(token)) {
-              throw new DOMEx(
-                'INVALID_CHARACTER_ERR',
-                'String contains an invalid character',
-              );
-            }
-            return arrIndexOf.call(classList, token);
-          },
-          ClassList = function(elem) {
-            var trimmedClasses = strTrim.call(elem.getAttribute('class') || ''),
-              classes = trimmedClasses ? trimmedClasses.split(/\s+/) : [],
-              i = 0,
-              len = classes.length;
-            for (; i < len; i++) {
-              this.push(classes[i]);
-            }
-            this._updateClassName = function() {
-              elem.setAttribute('class', this.toString());
-            };
-          },
-          classListProto = (ClassList[protoProp] = []),
-          classListGetter = function() {
-            return new ClassList(this);
+    var config =
+      arguments.length > 1 && arguments[1] !== undefined
+        ? arguments[1]
+        : {
+            withRef: false,
           };
-        // Most DOMException implementations don't allow calling DOMException's toString()
-        // on non-DOMExceptions. Error's toString() is sufficient here.
-        DOMEx[protoProp] = Error[protoProp];
-        classListProto.item = function(i) {
-          return this[i] || null;
-        };
-        classListProto.contains = function(token) {
-          token += '';
-          return checkTokenAndGetIndex(this, token) !== -1;
-        };
-        classListProto.add = function() {
-          var tokens = arguments,
-            i = 0,
-            l = tokens.length,
-            token,
-            updated = false;
-          do {
-            token = tokens[i] + '';
-            if (checkTokenAndGetIndex(this, token) === -1) {
-              this.push(token);
-              updated = true;
-            }
-          } while (++i < l);
+    return (
+      (_temp = _class = (function(_React$Component) {
+        inherits(WithSortableHandle, _React$Component);
 
-          if (updated) {
-            this._updateClassName();
-          }
-        };
-        classListProto.remove = function() {
-          var tokens = arguments,
-            i = 0,
-            l = tokens.length,
-            token,
-            updated = false,
-            index;
-          do {
-            token = tokens[i] + '';
-            index = checkTokenAndGetIndex(this, token);
-            while (index !== -1) {
-              this.splice(index, 1);
-              updated = true;
-              index = checkTokenAndGetIndex(this, token);
-            }
-          } while (++i < l);
+        function WithSortableHandle() {
+          classCallCheck(this, WithSortableHandle);
 
-          if (updated) {
-            this._updateClassName();
-          }
-        };
-        classListProto.toggle = function(token, force) {
-          token += '';
-
-          var result = this.contains(token),
-            method = result
-              ? force !== true && 'remove'
-              : force !== false && 'add';
-          if (method) {
-            this[method](token);
-          }
-
-          if (force === true || force === false) {
-            return force;
-          } else {
-            return !result;
-          }
-        };
-        classListProto.toString = function() {
-          return this.join(' ');
-        };
-
-        if (objCtr.defineProperty) {
-          var classListPropDesc = {
-            get: classListGetter,
-            enumerable: true,
-            configurable: true,
-          };
-          try {
-            objCtr.defineProperty(
-              elemCtrProto,
-              classListProp,
-              classListPropDesc,
-            );
-          } catch (ex) {
-            // IE 8 doesn't support enumerable:true
-            // adding undefined to fight this issue https://github.com/eligrey/classList.js/issues/36
-            // modernie IE8-MSW7 machine has IE8 8.0.6001.18702 and is affected
-            if (ex.number === undefined || ex.number === -0x7ff5ec54) {
-              classListPropDesc.enumerable = false;
-              objCtr.defineProperty(
-                elemCtrProto,
-                classListProp,
-                classListPropDesc,
-              );
-            }
-          }
-        } else if (objCtr[protoProp].__defineGetter__) {
-          elemCtrProto.__defineGetter__(classListProp, classListGetter);
+          return possibleConstructorReturn(
+            this,
+            getPrototypeOf(WithSortableHandle).apply(this, arguments),
+          );
         }
-      })(window.self);
+
+        createClass(WithSortableHandle, [
+          {
+            key: 'componentDidMount',
+            value: function componentDidMount() {
+              var node = reactDom.findDOMNode(this);
+              node.sortableHandle = true;
+            },
+          },
+          {
+            key: 'getWrappedInstance',
+            value: function getWrappedInstance() {
+              invariant_1(
+                config.withRef,
+                'To access the wrapped instance, you need to pass in {withRef: true} as the second argument of the SortableHandle() call',
+              );
+              return this.refs.wrappedInstance;
+            },
+          },
+          {
+            key: 'render',
+            value: function render() {
+              var ref = config.withRef ? 'wrappedInstance' : null;
+              return React.createElement(
+                WrappedComponent,
+                _extends_1(
+                  {
+                    ref: ref,
+                  },
+                  this.props,
+                ),
+              );
+            },
+          },
+        ]);
+
+        return WithSortableHandle;
+      })(React.Component)),
+      defineProperty(
+        _class,
+        'displayName',
+        provideDisplayName('sortableHandle', WrappedComponent),
+      ),
+      _temp
+    );
+  }
+  function isSortableHandle(node) {
+    return node.sortableHandle != null;
+  }
+
+  var AutoScroller = (function() {
+    function AutoScroller(container, onScrollCallback) {
+      classCallCheck(this, AutoScroller);
+
+      this.container = container;
+      this.onScrollCallback = onScrollCallback;
     }
 
-    // There is full or partial native classList support, so just check if we need
-    // to normalize the add/remove and toggle APIs.
+    createClass(AutoScroller, [
+      {
+        key: 'clear',
+        value: function clear() {
+          clearInterval(this.interval);
+          this.interval = null;
+        },
+      },
+      {
+        key: 'update',
+        value: function update(_ref) {
+          var _this = this;
 
-    (function() {
-      var testElement = document.createElement('_');
-
-      testElement.classList.add('c1', 'c2');
-
-      // Polyfill for IE 10/11 and Firefox <26, where classList.add and
-      // classList.remove exist but support only one argument at a time.
-      if (!testElement.classList.contains('c2')) {
-        var createMethod = function(method) {
-          var original = DOMTokenList.prototype[method];
-
-          DOMTokenList.prototype[method] = function(token) {
-            var i,
-              len = arguments.length;
-
-            for (i = 0; i < len; i++) {
-              token = arguments[i];
-              original.call(this, token);
-            }
+          var translate = _ref.translate,
+            minTranslate = _ref.minTranslate,
+            maxTranslate = _ref.maxTranslate,
+            width = _ref.width,
+            height = _ref.height;
+          var direction = {
+            x: 0,
+            y: 0,
           };
-        };
-        createMethod('add');
-        createMethod('remove');
-      }
+          var speed = {
+            x: 1,
+            y: 1,
+          };
+          var acceleration = {
+            x: 10,
+            y: 10,
+          };
+          var _this$container = this.container,
+            scrollTop = _this$container.scrollTop,
+            scrollLeft = _this$container.scrollLeft,
+            scrollHeight = _this$container.scrollHeight,
+            scrollWidth = _this$container.scrollWidth,
+            clientHeight = _this$container.clientHeight,
+            clientWidth = _this$container.clientWidth;
+          var isTop = scrollTop === 0;
+          var isBottom = scrollHeight - scrollTop - clientHeight === 0;
+          var isLeft = scrollLeft === 0;
+          var isRight = scrollWidth - scrollLeft - clientWidth === 0;
 
-      testElement.classList.toggle('c3', false);
-
-      // Polyfill for IE 10 and Firefox <24, where classList.toggle does not
-      // support the second argument.
-      if (testElement.classList.contains('c3')) {
-        var _toggle = DOMTokenList.prototype.toggle;
-
-        DOMTokenList.prototype.toggle = function(token, force) {
-          if (1 in arguments && !this.contains(token) === !force) {
-            return force;
-          } else {
-            return _toggle.call(this, token);
+          if (translate.y >= maxTranslate.y - height / 2 && !isBottom) {
+            direction.y = 1;
+            speed.y =
+              acceleration.y *
+              Math.abs((maxTranslate.y - height / 2 - translate.y) / height);
+          } else if (translate.x >= maxTranslate.x - width / 2 && !isRight) {
+            direction.x = 1;
+            speed.x =
+              acceleration.x *
+              Math.abs((maxTranslate.x - width / 2 - translate.x) / width);
+          } else if (translate.y <= minTranslate.y + height / 2 && !isTop) {
+            direction.y = -1;
+            speed.y =
+              acceleration.y *
+              Math.abs((translate.y - height / 2 - minTranslate.y) / height);
+          } else if (translate.x <= minTranslate.x + width / 2 && !isLeft) {
+            direction.x = -1;
+            speed.x =
+              acceleration.x *
+              Math.abs((translate.x - width / 2 - minTranslate.x) / width);
           }
-        };
-      }
 
-      testElement = null;
-    })();
+          if (this.interval) {
+            this.clear();
+            this.isAutoScrolling = false;
+          }
+
+          if (direction.x !== 0 || direction.y !== 0) {
+            this.interval = setInterval(function() {
+              _this.isAutoScrolling = true;
+              var offset = {
+                left: speed.x * direction.x,
+                top: speed.y * direction.y,
+              };
+              _this.container.scrollTop += offset.top;
+              _this.container.scrollLeft += offset.left;
+
+              _this.onScrollCallback(offset);
+            }, 5);
+          }
+        },
+      },
+    ]);
+
+    return AutoScroller;
+  })();
+
+  function defaultGetHelperDimensions(_ref) {
+    var node = _ref.node;
+    return {
+      height: node.offsetHeight,
+      width: node.offsetWidth,
+    };
+  }
+
+  function defaultShouldCancelStart(event) {
+    var disabledElements = ['input', 'textarea', 'select', 'option', 'button'];
+
+    if (disabledElements.indexOf(event.target.tagName.toLowerCase()) !== -1) {
+      return true;
+    }
+
+    return false;
+  }
+
+  var propTypes = {
+    animateNodes: PropTypes.bool,
+    axis: PropTypes.oneOf(['x', 'y', 'xy']),
+    contentWindow: PropTypes.any,
+    disableAutoscroll: PropTypes.bool,
+    distance: PropTypes.number,
+    dragLayer: PropTypes.object,
+    getContainer: PropTypes.func,
+    getHelperDimensions: PropTypes.func,
+    helperClass: PropTypes.string,
+    helperContainer: PropTypes.oneOfType([
+      PropTypes.func,
+      typeof HTMLElement === 'undefined'
+        ? PropTypes.any
+        : PropTypes.instanceOf(HTMLElement),
+    ]),
+    hideSortableGhost: PropTypes.bool,
+    lockAxis: PropTypes.string,
+    lockOffset: PropTypes.oneOfType([
+      PropTypes.number,
+      PropTypes.string,
+      PropTypes.arrayOf(
+        PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
+      ),
+    ]),
+    lockToContainerEdges: PropTypes.bool,
+    onDragEnd: PropTypes.func,
+    onSortEnd: PropTypes.func,
+    onSortMove: PropTypes.func,
+    onSortOver: PropTypes.func,
+    onSortStart: PropTypes.func,
+    pressDelay: PropTypes.number,
+    pressThreshold: PropTypes.number,
+    shouldCancelStart: PropTypes.func,
+    transitionDuration: PropTypes.number,
+    updateBeforeSortStart: PropTypes.func,
+    useDragHandle: PropTypes.bool,
+    useWindowAsScrollContainer: PropTypes.bool,
+  };
+  var defaultProps = {
+    animateNodes: true,
+    axis: 'y',
+    disableAutoscroll: false,
+    distance: 0,
+    getHelperDimensions: defaultGetHelperDimensions,
+    hideSortableGhost: true,
+    lockOffset: '50%',
+    lockToContainerEdges: false,
+    pressDelay: 0,
+    pressThreshold: 5,
+    shouldCancelStart: defaultShouldCancelStart,
+    transitionDuration: 300,
+    useWindowAsScrollContainer: false,
+  };
+  var omittedProps = Object.keys(propTypes);
+  function validateProps(props) {
+    invariant_1(
+      !(props.distance && props.pressDelay),
+      'Attempted to set both `pressDelay` and `distance` on SortableContainer, you may only use one or the other, not both at the same time.',
+    );
   }
 
   function _finallyRethrows(body, finalizer) {
@@ -4670,8 +4694,8 @@
               return;
             }
 
-            _this._touched = true;
-            _this._pos = getPosition(event);
+            _this.touched = true;
+            _this.position = getPosition(event);
             var node = closest(event.target, function(el) {
               return el.sortableInfo != null;
             });
@@ -4680,7 +4704,7 @@
               node &&
               node.sortableInfo &&
               _this.nodeIsChild(node) &&
-              !_this.sorting
+              !_this.state.sorting
             ) {
               var useDragHandle = _this.props.useDragHandle;
               var _node$sortableInfo = node.sortableInfo,
@@ -4692,18 +4716,13 @@
                 return;
               }
 
-              if (
-                useDragHandle &&
-                !closest(event.target, function(el) {
-                  return el.sortableHandle != null;
-                })
-              ) {
+              if (useDragHandle && !closest(event.target, isSortableHandle)) {
                 return;
               }
 
               _this.manager.active = {
-                index: index,
                 collection: collection,
+                index: index,
                 item: items[index],
               };
 
@@ -4740,22 +4759,21 @@
               pressThreshold = _this$props2.pressThreshold;
 
             if (
-              !_this.sorting &&
-              _this._touched &&
+              !_this.state.sorting &&
+              _this.touched &&
               !_this._awaitingUpdateBeforeSortStart
             ) {
               var position = getPosition(event);
               var delta = {
-                x: _this._pos.x - position.x,
-                y: _this._pos.y - position.y,
+                x: _this.position.x - position.x,
+                y: _this.position.y - position.y,
               };
               var combinedDelta = Math.abs(delta.x) + Math.abs(delta.y);
               _this.delta = delta;
 
               if (
                 !distance &&
-                (!pressThreshold ||
-                  (pressThreshold && combinedDelta >= pressThreshold))
+                (!pressThreshold || combinedDelta >= pressThreshold)
               ) {
                 clearTimeout(_this.cancelTimer);
                 _this.cancelTimer = setTimeout(_this.cancel, 0);
@@ -4770,15 +4788,16 @@
           });
 
           defineProperty(assertThisInitialized(_this), 'handleEnd', function() {
-            _this._touched = false;
+            _this.touched = false;
 
             _this.cancel();
           });
 
           defineProperty(assertThisInitialized(_this), 'cancel', function() {
             var distance = _this.props.distance;
+            var sorting = _this.state.sorting;
 
-            if (!_this.sorting) {
+            if (!sorting) {
               if (!distance) {
                 clearTimeout(_this.pressTimer);
               }
@@ -4801,7 +4820,7 @@
                 }
               } else {
                 active = _this.dragLayer.startDrag(
-                  _this.document.body,
+                  _this.helperContainer,
                   assertThisInitialized(_this),
                   event,
                 );
@@ -4817,18 +4836,20 @@
                       y: _axis.indexOf('y') >= 0,
                     };
                     _this.initialScroll = {
-                      top: _this.scrollContainer.scrollTop,
                       left: _this.scrollContainer.scrollLeft,
+                      top: _this.scrollContainer.scrollTop,
                     };
                     _this.initialWindowScroll = {
-                      top: window.pageYOffset,
                       left: window.pageXOffset,
+                      top: window.pageYOffset,
                     };
 
                     if (_hideSortableGhost) {
                       _this.sortableGhost = _node;
-                      _node.style.visibility = 'hidden';
-                      _node.style.opacity = 0;
+                      setInlineStyles(_node, {
+                        opacity: 0,
+                        visibility: 'hidden',
+                      });
                     }
 
                     if (_helperClass) {
@@ -4841,15 +4862,17 @@
                       );
                     }
 
-                    _this.sorting = true;
-                    _this.sortingIndex = _index;
+                    _this.setState({
+                      sorting: true,
+                      sortingIndex: _index,
+                    });
 
                     if (_onSortStart) {
                       _onSortStart(
                         {
-                          node: _node,
-                          index: _index,
                           collection: _collection,
+                          index: _index,
+                          node: _node,
                         },
                         event,
                       );
@@ -4876,9 +4899,9 @@
                           return Promise.resolve(
                             updateBeforeSortStart(
                               {
-                                node: _node,
-                                index: _index,
                                 collection: _collection,
+                                index: _index,
+                                node: _node,
                               },
                               event,
                             ),
@@ -4909,26 +4932,6 @@
               return Promise.reject(e);
             }
           });
-
-          defineProperty(
-            assertThisInitialized(_this),
-            '_handleSortMove',
-            function(event) {
-              if (_this.checkActive(event)) {
-                _this.animateNodes();
-
-                _this.autoscroll();
-              }
-
-              if (window.requestAnimationFrame) {
-                _this.sortMoveAF = null;
-              } else {
-                setTimeout(function() {
-                  _this.sortMoveAF = null;
-                }, 1000 / 60);
-              }
-            },
-          );
 
           defineProperty(
             assertThisInitialized(_this),
@@ -4968,12 +4971,12 @@
               var _this$props4 = _this.props,
                 hideSortableGhost = _this$props4.hideSortableGhost,
                 onSortEnd = _this$props4.onSortEnd;
+              var collection = _this.manager.active.collection;
+              var nodes = _this.manager.refs[collection];
 
               if (!_this.manager.active) {
                 return;
               }
-
-              var collection = _this.manager.active.collection;
 
               if (window.cancelAnimationFrame && _this.sortMoveAF) {
                 window.cancelAnimationFrame(_this.sortMoveAF);
@@ -4981,25 +4984,28 @@
               }
 
               if (hideSortableGhost && _this.sortableGhost) {
-                _this.sortableGhost.style.visibility = '';
-                _this.sortableGhost.style.opacity = '';
+                setInlineStyles(_this.sortableGhost, {
+                  opacity: '',
+                  visibility: '',
+                });
               }
-
-              var nodes = _this.manager.refs[collection];
 
               for (var i = 0, len = nodes.length; i < len; i++) {
                 var _node2 = nodes[i];
                 var el = _node2.node;
                 _node2.edgeOffset = null;
-                el.style[''.concat(vendorPrefix, 'Transform')] = '';
-                el.style[''.concat(vendorPrefix, 'TransitionDuration')] = '';
+                setTranslate3d(el, null);
+                setTransitionDuration(el, null);
               }
 
-              clearInterval(_this.autoscrollInterval);
-              _this.autoscrollInterval = null;
+              _this.autoScroller.clear();
+
               _this.manager.active = null;
-              _this.sorting = false;
-              _this.sortingIndex = null;
+
+              _this.setState({
+                sorting: false,
+                sortingIndex: null,
+              });
 
               if (typeof onSortEnd === 'function') {
                 if (newList) {
@@ -5008,16 +5014,65 @@
 
                 onSortEnd(
                   {
-                    oldIndex: _this.index,
-                    newIndex: _this.newIndex,
-                    newList: newList,
                     collection: collection,
+                    newIndex: _this.newIndex,
+                    oldIndex: _this.index,
+                    newList: newList,
                   },
                   event,
                 );
               }
 
-              _this._touched = false;
+              _this.touched = false;
+            },
+          );
+
+          defineProperty(
+            assertThisInitialized(_this),
+            'autoscroll',
+            function() {
+              var disableAutoscroll = _this.props.disableAutoscroll;
+
+              if (disableAutoscroll) {
+                return;
+              }
+
+              _this.autoScroller.update({
+                height: _this.dragLayer.height,
+                maxTranslate: _this.dragLayer.maxTranslate,
+                minTranslate: _this.dragLayer.minTranslate,
+                translate: _this.dragLayer.translate,
+                width: _this.dragLayer.width,
+              });
+            },
+          );
+
+          defineProperty(assertThisInitialized(_this), 'onAutoScroll', function(
+            offset,
+          ) {
+            _this.dragLayer.translate.x += offset.left;
+            _this.dragLayer.translate.y += offset.top;
+
+            _this.animateNodes();
+          });
+
+          defineProperty(
+            assertThisInitialized(_this),
+            '_handleSortMove',
+            function(event) {
+              if (_this.checkActive(event)) {
+                _this.animateNodes();
+
+                _this.autoscroll();
+              }
+
+              if (window.requestAnimationFrame) {
+                _this.sortMoveAF = null;
+              } else {
+                setTimeout(function() {
+                  _this.sortMoveAF = null;
+                }, 1000 / 60);
+              }
             },
           );
 
@@ -5118,121 +5173,8 @@
             return true;
           });
 
-          defineProperty(
-            assertThisInitialized(_this),
-            'autoscroll',
-            function() {
-              var disableAutoscroll = _this.props.disableAutoscroll;
-
-              if (disableAutoscroll) {
-                return;
-              }
-
-              var translate = _this.dragLayer.translate;
-              var direction = {
-                x: 0,
-                y: 0,
-              };
-              var speed = {
-                x: 1,
-                y: 1,
-              };
-              var acceleration = {
-                x: 10,
-                y: 10,
-              };
-              var _this$scrollContainer = _this.scrollContainer,
-                scrollTop = _this$scrollContainer.scrollTop,
-                scrollLeft = _this$scrollContainer.scrollLeft,
-                scrollHeight = _this$scrollContainer.scrollHeight,
-                scrollWidth = _this$scrollContainer.scrollWidth,
-                clientHeight = _this$scrollContainer.clientHeight,
-                clientWidth = _this$scrollContainer.clientWidth;
-              var isTop = scrollTop === 0;
-              var isBottom = scrollHeight - scrollTop - clientHeight === 0;
-              var isLeft = scrollLeft === 0;
-              var isRight = scrollWidth - scrollLeft - clientWidth === 0;
-
-              if (
-                translate.y >=
-                  _this.dragLayer.maxTranslate.y - _this.dragLayer.height / 2 &&
-                !isBottom
-              ) {
-                direction.y = 1;
-                speed.y =
-                  acceleration.y *
-                  Math.abs(
-                    (_this.dragLayer.maxTranslate.y -
-                      _this.dragLayer.height / 2 -
-                      translate.y) /
-                      _this.dragLayer.height,
-                  );
-              } else if (
-                translate.x >=
-                  _this.dragLayer.maxTranslate.x - _this.dragLayer.width / 2 &&
-                !isRight
-              ) {
-                direction.x = 1;
-                speed.x =
-                  acceleration.x *
-                  Math.abs(
-                    (_this.dragLayer.maxTranslate.x -
-                      _this.dragLayer.width / 2 -
-                      translate.x) /
-                      _this.dragLayer.width,
-                  );
-              } else if (
-                translate.y <=
-                  _this.dragLayer.minTranslate.y + _this.dragLayer.height / 2 &&
-                !isTop
-              ) {
-                direction.y = -1;
-                speed.y =
-                  acceleration.y *
-                  Math.abs(
-                    (translate.y -
-                      _this.dragLayer.height / 2 -
-                      _this.dragLayer.minTranslate.y) /
-                      _this.dragLayer.height,
-                  );
-              } else if (
-                translate.x <=
-                  _this.dragLayer.minTranslate.x + _this.dragLayer.width / 2 &&
-                !isLeft
-              ) {
-                direction.x = -1;
-                speed.x =
-                  acceleration.x *
-                  Math.abs(
-                    (translate.x -
-                      _this.dragLayer.width / 2 -
-                      _this.dragLayer.minTranslate.x) /
-                      _this.dragLayer.width,
-                  );
-              }
-
-              if (_this.autoscrollInterval) {
-                clearInterval(_this.autoscrollInterval);
-                _this.autoscrollInterval = null;
-                _this.isAutoScrolling = false;
-              }
-
-              if (direction.x !== 0 || direction.y !== 0) {
-                _this.autoscrollInterval = setInterval(function() {
-                  _this.isAutoScrolling = true;
-                  var offset = {
-                    left: speed.x * direction.x,
-                    top: speed.y * direction.y,
-                  };
-                  _this.scrollContainer.scrollTop += offset.top;
-                  _this.scrollContainer.scrollLeft += offset.left;
-
-                  _this.animateNodes();
-                }, 5);
-              }
-            },
-          );
-
+          validateProps(props);
+          _this.state = {};
           _this.dragLayer = props.dragLayer || new DragLayer();
 
           _this.dragLayer.addRef(assertThisInitialized(_this));
@@ -5240,16 +5182,10 @@
           _this.dragLayer.onDragEnd = props.onDragEnd;
           _this.manager = new Manager();
           _this.events = {
-            start: _this.handleStart,
-            move: _this.handleMove,
             end: _this.handleEnd,
+            move: _this.handleMove,
+            start: _this.handleStart,
           };
-          invariant_1(
-            !(props.distance && props.pressDelay),
-            'Attempted to set both `pressDelay` and `distance` on SortableContainer, you may only use one or the other, not both at the same time.',
-          );
-          _this.state = {};
-          _this.sorting = false;
           return _this;
         }
 
@@ -5289,22 +5225,19 @@
                   top: _this2.scrollContainer.scrollTop,
                   left: _this2.scrollContainer.scrollLeft,
                 };
-
-                var _loop = function _loop(key) {
-                  if (_this2.events.hasOwnProperty(key)) {
-                    events[key].forEach(function(eventName) {
-                      return _this2.container.addEventListener(
-                        eventName,
-                        _this2.events[key],
-                        false,
-                      );
-                    });
-                  }
-                };
-
-                for (var key in _this2.events) {
-                  _loop(key);
-                }
+                _this2.autoScroller = new AutoScroller(
+                  _this2.scrollContainer,
+                  _this2.onAutoScroll,
+                );
+                Object.keys(_this2.events).forEach(function(key) {
+                  return events[key].forEach(function(eventName) {
+                    return _this2.container.addEventListener(
+                      eventName,
+                      _this2.events[key],
+                      false,
+                    );
+                  });
+                });
               });
             },
           },
@@ -5316,20 +5249,14 @@
               this.dragLayer.removeRef(this);
 
               if (this.container) {
-                var _loop2 = function _loop2(key) {
-                  if (_this3.events.hasOwnProperty(key)) {
-                    events[key].forEach(function(eventName) {
-                      return _this3.container.removeEventListener(
-                        eventName,
-                        _this3.events[key],
-                      );
-                    });
-                  }
-                };
-
-                for (var key in this.events) {
-                  _loop2(key);
-                }
+                Object.keys(this.events).forEach(function(key) {
+                  return events[key].forEach(function(eventName) {
+                    return _this3.container.removeEventListener(
+                      eventName,
+                      _this3.events[key],
+                    );
+                  });
+                });
               }
             },
           },
@@ -5343,41 +5270,6 @@
               }
 
               this.checkActiveIndex(nextProps);
-            },
-          },
-          {
-            key: 'getLockPixelOffsets',
-            value: function getLockPixelOffsets() {
-              var _this$dragLayer = this.dragLayer,
-                width = _this$dragLayer.width,
-                height = _this$dragLayer.height;
-              var lockOffset = this.props.lockOffset;
-              var offsets = Array.isArray(lockOffset)
-                ? lockOffset
-                : [lockOffset, lockOffset];
-              invariant_1(
-                offsets.length === 2,
-                'lockOffset prop of SortableContainer should be a single ' +
-                  'value or an array of exactly two values. Given %s',
-                lockOffset,
-              );
-
-              var _offsets = slicedToArray(offsets, 2),
-                minLockOffset = _offsets[0],
-                maxLockOffset = _offsets[1];
-
-              return [
-                getLockPixelOffset({
-                  lockOffset: minLockOffset,
-                  width: width,
-                  height: height,
-                }),
-                getLockPixelOffset({
-                  lockOffset: maxLockOffset,
-                  width: width,
-                  height: height,
-                }),
-              ];
             },
           },
           {
@@ -5410,8 +5302,8 @@
                   containerScrollDelta.top,
               };
               var windowScrollDelta = {
-                top: window.pageYOffset - this.initialWindowScroll.top,
                 left: window.pageXOffset - this.initialWindowScroll.left,
+                top: window.pageYOffset - this.initialWindowScroll.top,
               };
               var prevIndex = this.newIndex;
               this.newIndex = null;
@@ -5422,14 +5314,14 @@
                 var width = _node4.offsetWidth;
                 var height = _node4.offsetHeight;
                 var offset = {
-                  width:
-                    this.dragLayer.width > width
-                      ? width / 2
-                      : this.dragLayer.width / 2,
                   height:
                     this.dragLayer.height > height
                       ? height / 2
                       : this.dragLayer.height / 2,
+                  width:
+                    this.dragLayer.width > width
+                      ? width / 2
+                      : this.dragLayer.width / 2,
                 };
                 var translate = {
                   x: 0,
@@ -5455,17 +5347,17 @@
                 if (_index3 === this.index) {
                   if (hideSortableGhost) {
                     this.sortableGhost = _node4;
-                    _node4.style.visibility = 'hidden';
-                    _node4.style.opacity = 0;
+                    setInlineStyles(_node4, {
+                      opacity: 0,
+                      visibility: 'hidden',
+                    });
                   }
 
                   continue;
                 }
 
                 if (transitionDuration) {
-                  _node4.style[
-                    ''.concat(vendorPrefix, 'TransitionDuration')
-                  ] = ''.concat(transitionDuration, 'ms');
+                  setTransitionDuration(_node4, transitionDuration);
                 }
 
                 if (this.axis.x) {
@@ -5585,11 +5477,7 @@
                 }
 
                 if (animateNodes) {
-                  _node4.style[
-                    ''.concat(vendorPrefix, 'Transform')
-                  ] = 'translate3d('
-                    .concat(translate.x, 'px,')
-                    .concat(translate.y, 'px,0)');
+                  setTranslate3d(_node4, translate);
                 }
               }
 
@@ -5599,10 +5487,10 @@
 
               if (onSortOver && this.newIndex !== prevIndex) {
                 onSortOver({
+                  collection: this.manager.active.collection,
+                  index: this.index,
                   newIndex: this.newIndex,
                   oldIndex: prevIndex,
-                  index: this.index,
-                  collection: this.manager.active.collection,
                 });
               }
             },
@@ -5641,33 +5529,7 @@
                   {
                     ref: ref,
                   },
-                  omit(
-                    this.props,
-                    'contentWindow',
-                    'useWindowAsScrollContainer',
-                    'distance',
-                    'helperClass',
-                    'hideSortableGhost',
-                    'transitionDuration',
-                    'useDragHandle',
-                    'animateNodes',
-                    'pressDelay',
-                    'pressThreshold',
-                    'shouldCancelStart',
-                    'updateBeforeSortStart',
-                    'onSortStart',
-                    'onSortSwap',
-                    'onSortMove',
-                    'onSortEnd',
-                    'axis',
-                    'lockAxis',
-                    'lockOffset',
-                    'lockToContainerEdges',
-                    'getContainer',
-                    'getHelperDimensions',
-                    'helperContainer',
-                    'disableAutoscroll',
-                  ),
+                  omit(this.props, omittedProps),
                 ),
               );
             },
@@ -5693,82 +5555,8 @@
         'displayName',
         provideDisplayName('sortableList', WrappedComponent),
       ),
-      defineProperty(_class, 'defaultProps', {
-        axis: 'y',
-        transitionDuration: 300,
-        pressDelay: 0,
-        pressThreshold: 5,
-        distance: 0,
-        useWindowAsScrollContainer: false,
-        hideSortableGhost: true,
-        animateNodes: true,
-        shouldCancelStart: function shouldCancelStart(event) {
-          var disabledElements = [
-            'input',
-            'textarea',
-            'select',
-            'option',
-            'button',
-          ];
-
-          if (
-            disabledElements.indexOf(event.target.tagName.toLowerCase()) !== -1
-          ) {
-            return true;
-          }
-
-          return false;
-        },
-        lockToContainerEdges: false,
-        lockOffset: '50%',
-        getHelperDimensions: function getHelperDimensions(_ref2) {
-          var node = _ref2.node;
-          return {
-            width: node.offsetWidth,
-            height: node.offsetHeight,
-          };
-        },
-        disableAutoscroll: false,
-      }),
-      defineProperty(_class, 'propTypes', {
-        axis: PropTypes.oneOf(['x', 'y', 'xy']),
-        distance: PropTypes.number,
-        dragLayer: PropTypes.object,
-        lockAxis: PropTypes.string,
-        helperClass: PropTypes.string,
-        transitionDuration: PropTypes.number,
-        contentWindow: PropTypes.any,
-        updateBeforeSortStart: PropTypes.func,
-        onSortStart: PropTypes.func,
-        onSortMove: PropTypes.func,
-        onSortOver: PropTypes.func,
-        onSortEnd: PropTypes.func,
-        onDragEnd: PropTypes.func,
-        shouldCancelStart: PropTypes.func,
-        pressDelay: PropTypes.number,
-        pressThreshold: PropTypes.number,
-        useDragHandle: PropTypes.bool,
-        animateNodes: PropTypes.bool,
-        useWindowAsScrollContainer: PropTypes.bool,
-        hideSortableGhost: PropTypes.bool,
-        lockToContainerEdges: PropTypes.bool,
-        lockOffset: PropTypes.oneOfType([
-          PropTypes.number,
-          PropTypes.string,
-          PropTypes.arrayOf(
-            PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
-          ),
-        ]),
-        getContainer: PropTypes.func,
-        getHelperDimensions: PropTypes.func,
-        helperContainer: PropTypes.oneOfType([
-          PropTypes.func,
-          typeof HTMLElement === 'undefined'
-            ? PropTypes.any
-            : PropTypes.instanceOf(HTMLElement),
-        ]),
-        disableAutoscroll: PropTypes.bool,
-      }),
+      defineProperty(_class, 'defaultProps', defaultProps),
+      defineProperty(_class, 'propTypes', propTypes),
       defineProperty(_class, 'childContextTypes', {
         manager: PropTypes.object.isRequired,
       }),
@@ -5776,6 +5564,12 @@
     );
   }
 
+  var propTypes$1 = {
+    index: PropTypes.number.isRequired,
+    collection: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
+    disabled: PropTypes.bool,
+  };
+  var omittedProps$1 = Object.keys(propTypes$1);
   function sortableElement(WrappedComponent) {
     var _class, _temp;
 
@@ -5839,9 +5633,9 @@
                 index = _this$props.index;
               var node = reactDom.findDOMNode(this);
               node.sortableInfo = {
-                index: index,
                 collection: collection,
                 disabled: disabled,
+                index: index,
                 manager: this.context.manager,
               };
               this.node = node;
@@ -5881,7 +5675,7 @@
                   {
                     ref: ref,
                   },
-                  omit(this.props, 'collection', 'disabled', 'index'),
+                  omit(this.props, omittedProps$1),
                 ),
               );
             },
@@ -5898,82 +5692,10 @@
       defineProperty(_class, 'contextTypes', {
         manager: PropTypes.object.isRequired,
       }),
-      defineProperty(_class, 'propTypes', {
-        index: PropTypes.number.isRequired,
-        collection: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
-        disabled: PropTypes.bool,
-      }),
+      defineProperty(_class, 'propTypes', propTypes$1),
       defineProperty(_class, 'defaultProps', {
         collection: 0,
       }),
-      _temp
-    );
-  }
-
-  function sortableHandle(WrappedComponent) {
-    var _class, _temp;
-
-    var config =
-      arguments.length > 1 && arguments[1] !== undefined
-        ? arguments[1]
-        : {
-            withRef: false,
-          };
-    return (
-      (_temp = _class = (function(_React$Component) {
-        inherits(WithSortableHandle, _React$Component);
-
-        function WithSortableHandle() {
-          classCallCheck(this, WithSortableHandle);
-
-          return possibleConstructorReturn(
-            this,
-            getPrototypeOf(WithSortableHandle).apply(this, arguments),
-          );
-        }
-
-        createClass(WithSortableHandle, [
-          {
-            key: 'componentDidMount',
-            value: function componentDidMount() {
-              var node = reactDom.findDOMNode(this);
-              node.sortableHandle = true;
-            },
-          },
-          {
-            key: 'getWrappedInstance',
-            value: function getWrappedInstance() {
-              invariant_1(
-                config.withRef,
-                'To access the wrapped instance, you need to pass in {withRef: true} as the second argument of the SortableHandle() call',
-              );
-              return this.refs.wrappedInstance;
-            },
-          },
-          {
-            key: 'render',
-            value: function render() {
-              var ref = config.withRef ? 'wrappedInstance' : null;
-              return React.createElement(
-                WrappedComponent,
-                _extends_1(
-                  {
-                    ref: ref,
-                  },
-                  this.props,
-                ),
-              );
-            },
-          },
-        ]);
-
-        return WithSortableHandle;
-      })(React.Component)),
-      defineProperty(
-        _class,
-        'displayName',
-        provideDisplayName('sortableHandle', WrappedComponent),
-      ),
       _temp
     );
   }
