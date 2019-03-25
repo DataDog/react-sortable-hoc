@@ -9,8 +9,6 @@ import {closestRect} from '../DragLayer/utils';
 import Manager from '../Manager';
 import {isSortableHandle} from '../SortableHandle';
 import AutoScroller from '../AutoScroller';
-import {defaultProps, omittedProps, propTypes, validateProps} from './props';
-
 import {
   closest,
   events,
@@ -25,6 +23,7 @@ import {
   setTransitionDuration,
   setTranslate3d,
 } from '../utils';
+import {defaultProps, omittedProps, propTypes, validateProps} from './props';
 
 export default function sortableContainer(
   WrappedComponent,
@@ -277,6 +276,7 @@ export default function sortableContainer(
           }
         }
 
+        const {index} = node.sortableInfo;
         this.index = index;
         this.newIndex = index;
 
