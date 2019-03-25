@@ -5103,6 +5103,12 @@
             assertThisInitialized(_this),
             'autoscroll',
             function() {
+              var disableAutoscroll = _this.props.disableAutoscroll;
+
+              if (disableAutoscroll) {
+                return;
+              }
+
               var translate = _this.dragLayer.translate;
               var direction = {
                 x: 0,
@@ -5641,6 +5647,7 @@
                     'getContainer',
                     'getHelperDimensions',
                     'helperContainer',
+                    'disableAutoscroll',
                   ),
                 ),
               );
@@ -5702,6 +5709,7 @@
             height: node.offsetHeight,
           };
         },
+        disableAutoscroll: false,
       }),
       defineProperty(_class, 'propTypes', {
         axis: PropTypes.oneOf(['x', 'y', 'xy']),
@@ -5740,6 +5748,7 @@
             ? PropTypes.any
             : PropTypes.instanceOf(HTMLElement),
         ]),
+        disableAutoscroll: PropTypes.bool,
       }),
       defineProperty(_class, 'childContextTypes', {
         manager: PropTypes.object.isRequired,
