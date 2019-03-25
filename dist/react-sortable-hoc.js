@@ -244,7 +244,7 @@ function isScrollable(el) {
 }
 
 function getScrollingParent(el) {
-  if (!el) {
+  if (!(el instanceof HTMLElement)) {
     return null;
   } else if (isScrollable(el)) {
     return el;
@@ -1653,11 +1653,9 @@ function sortableContainer(WrappedComponent) {
               hideSortableGhost = _this$props5.hideSortableGhost,
               onSortOver = _this$props5.onSortOver,
               animateNodes = _this$props5.animateNodes;
+            var containerScrollDelta = this.containerScrollDelta,
+              windowScrollDelta = this.windowScrollDelta;
             var nodes = this.manager.getOrderedRefs();
-            var containerScrollDelta = {
-              left: this.scrollContainer.scrollLeft - this.initialScroll.left,
-              top: this.scrollContainer.scrollTop - this.initialScroll.top,
-            };
             var sortingOffset = {
               left:
                 this.dragLayer.offsetEdge.left -
@@ -1669,10 +1667,6 @@ function sortableContainer(WrappedComponent) {
                 this.dragLayer.distanceBetweenContainers.y +
                 this.dragLayer.translate.y +
                 containerScrollDelta.top,
-            };
-            var windowScrollDelta = {
-              left: window.pageXOffset - this.initialWindowScroll.left,
-              top: window.pageYOffset - this.initialWindowScroll.top,
             };
             var prevIndex = this.newIndex;
             this.newIndex = null;
@@ -1910,6 +1904,36 @@ function sortableContainer(WrappedComponent) {
             }
 
             return this.props.helperContainer || this.document.body;
+          },
+        },
+        {
+          key: 'containerScrollDelta',
+          get: function get() {
+            var useWindowAsScrollContainer = this.props
+              .useWindowAsScrollContainer;
+
+            if (useWindowAsScrollContainer) {
+              return {
+                left: 0,
+                top: 0,
+              };
+            }
+
+            return {
+              left: this.scrollContainer.scrollLeft - this.initialScroll.left,
+              top: this.scrollContainer.scrollTop - this.initialScroll.top,
+            };
+          },
+        },
+        {
+          key: 'windowScrollDelta',
+          get: function get() {
+            return {
+              left:
+                this.contentWindow.pageXOffset - this.initialWindowScroll.left,
+              top:
+                this.contentWindow.pageYOffset - this.initialWindowScroll.top,
+            };
           },
         },
       ]);
