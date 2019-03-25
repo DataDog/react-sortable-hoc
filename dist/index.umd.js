@@ -58,6 +58,220 @@
       ? invariant['default']
       : invariant;
 
+  // A type of promise-like that resolves synchronously and supports only one observer
+  const _Pact = (function() {
+    function _Pact() {}
+    _Pact.prototype.then = function(onFulfilled, onRejected) {
+      const result = new _Pact();
+      const state = this.s;
+      if (state) {
+        const callback = state & 1 ? onFulfilled : onRejected;
+        if (callback) {
+          try {
+            _settle(result, 1, callback(this.v));
+          } catch (e) {
+            _settle(result, 2, e);
+          }
+          return result;
+        } else {
+          return this;
+        }
+      }
+      this.o = function(_this) {
+        try {
+          const value = _this.v;
+          if (_this.s & 1) {
+            _settle(result, 1, onFulfilled ? onFulfilled(value) : value);
+          } else if (onRejected) {
+            _settle(result, 1, onRejected(value));
+          } else {
+            _settle(result, 2, value);
+          }
+        } catch (e) {
+          _settle(result, 2, e);
+        }
+      };
+      return result;
+    };
+    return _Pact;
+  })();
+
+  // Settles a pact synchronously
+  function _settle(pact, state, value) {
+    if (!pact.s) {
+      if (value instanceof _Pact) {
+        if (value.s) {
+          if (state & 1) {
+            state = value.s;
+          }
+          value = value.v;
+        } else {
+          value.o = _settle.bind(null, pact, state);
+          return;
+        }
+      }
+      if (value && value.then) {
+        value.then(
+          _settle.bind(null, pact, state),
+          _settle.bind(null, pact, 2),
+        );
+        return;
+      }
+      pact.s = state;
+      pact.v = value;
+      const observer = pact.o;
+      if (observer) {
+        observer(pact);
+      }
+    }
+  }
+
+  // Asynchronously await a promise and pass the result to a finally continuation
+  function _finallyRethrows(body, finalizer) {
+    try {
+      var result = body();
+    } catch (e) {
+      return finalizer(true, e);
+    }
+    if (result && result.then) {
+      return result.then(
+        finalizer.bind(null, false),
+        finalizer.bind(null, true),
+      );
+    }
+    return finalizer(false, value);
+  }
+
+  // Sentinel value for early returns in generators
+  const _earlyReturn = {};
+
+  // Asynchronous generator class; accepts the entrypoint of the generator, to which it passes itself when the generator should start
+  const _AsyncGenerator = (function() {
+    function _AsyncGenerator(entry) {
+      this._entry = entry;
+      this._pact = null;
+      this._resolve = null;
+      this._return = null;
+      this._promise = null;
+    }
+
+    function _wrapReturnedValue(value) {
+      return {value: value, done: true};
+    }
+    function _wrapYieldedValue(value) {
+      return {value: value, done: false};
+    }
+
+    _AsyncGenerator.prototype[
+      Symbol.asyncIterator ||
+        (Symbol.asyncIterator = Symbol('Symbol.asyncIterator'))
+    ] = function() {
+      return this;
+    };
+    _AsyncGenerator.prototype._yield = function(value) {
+      // Yield the value to the pending next call
+      this._resolve(
+        value && value.then
+          ? value.then(_wrapYieldedValue)
+          : _wrapYieldedValue(value),
+      );
+      // Return a pact for an upcoming next/return/throw call
+      return (this._pact = new _Pact());
+    };
+    _AsyncGenerator.prototype.next = function(value) {
+      // Advance the generator, starting it if it has yet to be started
+      const _this = this;
+      return (_this._promise = new Promise(function(resolve) {
+        const _pact = _this._pact;
+        if (_pact === null) {
+          const _entry = _this._entry;
+          if (_entry === null) {
+            // Generator is started, but not awaiting a yield expression
+            // Abandon the next call!
+            return resolve(_this._promise);
+          }
+          // Start the generator
+          _this._entry = null;
+          _this._resolve = resolve;
+          function returnValue(value) {
+            _this._resolve(
+              value && value.then
+                ? value.then(_wrapReturnedValue)
+                : _wrapReturnedValue(value),
+            );
+            _this._pact = null;
+            _this._resolve = null;
+          }
+          _entry(_this).then(returnValue, function(error) {
+            if (error === _earlyReturn) {
+              returnValue(_this._return);
+            } else {
+              const pact = new _Pact();
+              _this._resolve(pact);
+              _this._pact = null;
+              _this._resolve = null;
+              _resolve(pact, 2, error);
+            }
+          });
+        } else {
+          // Generator is started and a yield expression is pending, settle it
+          _this._pact = null;
+          _this._resolve = resolve;
+          _settle(_pact, 1, value);
+        }
+      }));
+    };
+    _AsyncGenerator.prototype.return = function(value) {
+      // Early return from the generator if started, otherwise abandons the generator
+      const _this = this;
+      return (_this._promise = new Promise(function(resolve) {
+        const _pact = _this._pact;
+        if (_pact === null) {
+          if (_this._entry === null) {
+            // Generator is started, but not awaiting a yield expression
+            // Abandon the return call!
+            return resolve(_this._promise);
+          }
+          // Generator is not started, abandon it and return the specified value
+          _this._entry = null;
+          return resolve(
+            value && value.then
+              ? value.then(_wrapReturnedValue)
+              : _wrapReturnedValue(value),
+          );
+        }
+        // Settle the yield expression with a rejected "early return" value
+        _this._return = value;
+        _this._resolve = resolve;
+        _this._pact = null;
+        _settle(_pact, 2, _earlyReturn);
+      }));
+    };
+    _AsyncGenerator.prototype.throw = function(error) {
+      // Inject an exception into the pending yield expression
+      const _this = this;
+      return (_this._promise = new Promise(function(resolve, reject) {
+        const _pact = _this._pact;
+        if (_pact === null) {
+          if (_this._entry === null) {
+            // Generator is started, but not awaiting a yield expression
+            // Abandon the throw call!
+            return resolve(_this._promise);
+          }
+          // Generator is not started, abandon it and return a rejected Promise containing the error
+          _this._entry = null;
+          return reject(error);
+        }
+        // Settle the yield expression with the value as a rejection
+        _this._resolve = resolve;
+        _this._pact = null;
+        _settle(_pact, 2, error);
+      }));
+    };
+
+    return _AsyncGenerator;
+  })();
+
   function arrayMove(array, from, to) {
     // Will be deprecated soon. Consumers should install 'array-move' instead
     // https://www.npmjs.com/package/array-move
@@ -657,6 +871,8 @@
         function WithSortableContainer(props) {
           var this$1 = this;
 
+          var _this = this;
+
           superclass.call(this, props);
 
           this.checkActiveIndex = function(nextProps) {
@@ -757,7 +973,11 @@
             var distance = ref.distance;
             var pressThreshold = ref.pressThreshold;
 
-            if (!this$1.sorting && this$1._touched) {
+            if (
+              !this$1.sorting &&
+              this$1._touched &&
+              !this$1._awaitingUpdateBeforeSortStart
+            ) {
               var position = getPosition(event);
               var delta = {
                 x: this$1._pos.x - position.x,
@@ -802,74 +1022,125 @@
           };
 
           this.handlePress = function(event) {
-            var ref$2;
+            try {
+              var active = null;
 
-            var active = null;
+              if (_this.dragLayer.helper) {
+                if (_this.manager.active) {
+                  _this.checkActiveIndex();
 
-            if (this$1.dragLayer.helper) {
-              if (this$1.manager.active) {
-                this$1.checkActiveIndex();
-                active = this$1.manager.getActive();
-              }
-            } else {
-              active = this$1.dragLayer.startDrag(
-                this$1.document.body,
-                this$1,
-                event,
-              );
-            }
-
-            if (active) {
-              var ref = this$1.props;
-              var axis = ref.axis;
-              var helperClass = ref.helperClass;
-              var hideSortableGhost = ref.hideSortableGhost;
-              var onSortStart = ref.onSortStart;
-              var node = active.node;
-              var collection = active.collection;
-              var ref$1 = node.sortableInfo;
-              var index = ref$1.index;
-              this$1.index = index;
-              this$1.newIndex = index;
-              this$1.axis = {
-                x: axis.indexOf('x') >= 0,
-                y: axis.indexOf('y') >= 0,
-              };
-              this$1.initialScroll = {
-                top: this$1.container.scrollTop,
-                left: this$1.container.scrollLeft,
-              };
-              this$1.initialWindowScroll = {
-                top: window.pageYOffset,
-                left: window.pageXOffset,
-              };
-
-              if (hideSortableGhost) {
-                this$1.sortableGhost = node;
-                node.style.visibility = 'hidden';
-                node.style.opacity = 0;
-              }
-
-              if (helperClass) {
-                (ref$2 = this$1.dragLayer.helper.classList).add.apply(
-                  ref$2,
-                  helperClass.split(' '),
-                );
-              }
-
-              this$1.sorting = true;
-              this$1.sortingIndex = index;
-
-              if (onSortStart) {
-                onSortStart(
-                  {
-                    node: node,
-                    index: index,
-                    collection: collection,
-                  },
+                  active = _this.manager.getActive();
+                }
+              } else {
+                active = _this.dragLayer.startDrag(
+                  _this.document.body,
+                  _this,
                   event,
                 );
               }
+
+              var _temp5 = (function() {
+                if (active) {
+                  function _temp4() {
+                    var ref;
+
+                    _this.index = index;
+                    _this.newIndex = index;
+                    _this.axis = {
+                      x: axis.indexOf('x') >= 0,
+                      y: axis.indexOf('y') >= 0,
+                    };
+                    _this.initialScroll = {
+                      top: _this.container.scrollTop,
+                      left: _this.container.scrollLeft,
+                    };
+                    _this.initialWindowScroll = {
+                      top: window.pageYOffset,
+                      left: window.pageXOffset,
+                    };
+
+                    if (hideSortableGhost) {
+                      _this.sortableGhost = node;
+                      node.style.visibility = 'hidden';
+                      node.style.opacity = 0;
+                    }
+
+                    if (helperClass) {
+                      (ref = _this.dragLayer.helper.classList).add.apply(
+                        ref,
+                        helperClass.split(' '),
+                      );
+                    }
+
+                    _this.sorting = true;
+                    _this.sortingIndex = index;
+
+                    if (onSortStart) {
+                      onSortStart(
+                        {
+                          node: node,
+                          index: index,
+                          collection: collection,
+                        },
+                        event,
+                      );
+                    }
+                  }
+
+                  var ref = _this.props;
+                  var axis = ref.axis;
+                  var helperClass = ref.helperClass;
+                  var hideSortableGhost = ref.hideSortableGhost;
+                  var updateBeforeSortStart = ref.updateBeforeSortStart;
+                  var onSortStart = ref.onSortStart;
+                  var node = active.node;
+                  var collection = active.collection;
+                  var ref$1 = node.sortableInfo;
+                  var index = ref$1.index;
+
+                  var _temp3 = (function() {
+                    if (typeof updateBeforeSortStart === 'function') {
+                      _this._awaitingUpdateBeforeSortStart = true;
+
+                      var _temp2 = _finallyRethrows(
+                        function() {
+                          return Promise.resolve(
+                            updateBeforeSortStart(
+                              {
+                                node: node,
+                                index: index,
+                                collection: collection,
+                              },
+                              event,
+                            ),
+                          ).then(function() {});
+                        },
+                        function(_wasThrown, _result) {
+                          _this._awaitingUpdateBeforeSortStart = false;
+                          if (_wasThrown) {
+                            throw _result;
+                          }
+                          return _result;
+                        },
+                      );
+
+                      if (_temp2 && _temp2.then) {
+                        return _temp2.then(function() {});
+                      }
+                    }
+                  })();
+
+                  return _temp3 && _temp3.then
+                    ? _temp3.then(_temp4)
+                    : _temp4(_temp3);
+                }
+              })();
+
+              return Promise.resolve(
+                _temp5 && _temp5.then ? _temp5.then(function() {}) : void 0,
+              );
+            } catch (e) {
+              return Promise.reject(e);
             }
           };
 
@@ -1563,6 +1834,7 @@
                 'pressDelay',
                 'pressThreshold',
                 'shouldCancelStart',
+                'updateBeforeSortStart',
                 'onSortStart',
                 'onSortSwap',
                 'onSortMove',
@@ -1633,6 +1905,7 @@
         helperClass: PropTypes.string,
         transitionDuration: PropTypes.number,
         contentWindow: PropTypes.any,
+        updateBeforeSortStart: PropTypes.func,
         onSortStart: PropTypes.func,
         onSortMove: PropTypes.func,
         onSortOver: PropTypes.func,
