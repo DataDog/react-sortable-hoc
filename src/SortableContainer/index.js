@@ -8,7 +8,7 @@ import DragLayer from '../DragLayer';
 import {closestRect} from '../DragLayer/utils';
 import Manager from '../Manager';
 import {isSortableHandle} from '../SortableHandle';
-import AutoScroller from '../AutoScroller';
+
 import {
   closest,
   events,
@@ -23,6 +23,7 @@ import {
   setTransitionDuration,
   setTranslate3d,
 } from '../utils';
+import AutoScroller from '../AutoScroller';
 import {defaultProps, omittedProps, propTypes, validateProps} from './props';
 
 export default function sortableContainer(
