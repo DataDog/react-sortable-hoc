@@ -22,13 +22,19 @@ export default class Manager {
   }
 
   getActive() {
-    if (!this.active) return null;
+    if (!this.active) {
+      return null;
+    }
     const activeRef = this.refs[this.active.collection];
-    if (!activeRef) return null;
-    return activeRef.find(
-      // eslint-disable-next-line eqeqeq
-      ({node}) => node.sortableInfo.index == this.active.index
-    ) || activeRef.slice(-1).pop();
+    if (!activeRef) {
+      return null;
+    }
+    return (
+      activeRef.find(
+        // eslint-disable-next-line eqeqeq
+        ({node}) => node.sortableInfo.index == this.active.index,
+      ) || activeRef.slice(-1).pop()
+    );
   }
 
   getIndex(collection, ref) {
@@ -41,8 +47,16 @@ export default class Manager {
 }
 
 function sortByIndex(
-  {node: {sortableInfo: {index: index1}}},
-  {node: {sortableInfo: {index: index2}}}
+  {
+    node: {
+      sortableInfo: {index: index1},
+    },
+  },
+  {
+    node: {
+      sortableInfo: {index: index2},
+    },
+  },
 ) {
-  return (index1 - index2);
+  return index1 - index2;
 }

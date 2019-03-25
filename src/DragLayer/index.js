@@ -5,12 +5,49 @@ import {
   getElementMargin,
   getEdgeOffset,
   limit,
+  NodeType,
 } from '../utils';
 import {closestRect, updateDistanceBetweenContainers} from './utils';
 
 export default class DragLayer {
   helper = null;
   lists = [];
+
+  handleSortMove = (event) => {
+    // Prevent scrolling on mobile
+    event.preventDefault();
+    this.updatePosition(event);
+    this.updateTargetContainer(event);
+    if (this.targetList) {
+      this.targetList.handleSortMove(event);
+    }
+  };
+
+  handleSortEnd = (event) => {
+    if (this.listenerNode) {
+      events.move.forEach((eventName) =>
+        this.listenerNode.removeEventListener(eventName, this.handleSortMove),
+      );
+      events.end.forEach((eventName) =>
+        this.listenerNode.removeEventListener(eventName, this.handleSortEnd),
+      );
+    }
+
+    if (typeof this.onDragEnd === 'function') {
+      this.onDragEnd();
+    }
+    // Remove the helper from the DOM
+    if (this.helper) {
+      this.helper.parentNode.removeChild(this.helper);
+      this.helper = null;
+      this.targetList.handleSortEnd(event);
+    }
+
+    // Reset window scroll & container height diff
+    this.lists.forEach((list) => {
+      delete list.initialWindowScroll;
+    });
+  };
 
   addRef(list) {
     this.lists.push(list);
@@ -24,31 +61,31 @@ export default class DragLayer {
   }
 
   setTranslateBoundaries(containerBoundingRect, list) {
-    const { useWindowAsScrollContainer } = list.props;
+    const {useWindowAsScrollContainer} = list.props;
 
     this.minTranslate = {};
     this.maxTranslate = {};
     if (this.axis.x) {
-      this.minTranslate.x = (useWindowAsScrollContainer
-        ? 0
-        : containerBoundingRect.left) -
+      this.minTranslate.x =
+        (useWindowAsScrollContainer ? 0 : containerBoundingRect.left) -
         this.boundingClientRect.left -
         this.width / 2;
-      this.maxTranslate.x = (useWindowAsScrollContainer
-        ? list.contentWindow.innerWidth
-        : containerBoundingRect.left + containerBoundingRect.width) -
+      this.maxTranslate.x =
+        (useWindowAsScrollContainer
+          ? list.contentWindow.innerWidth
+          : containerBoundingRect.left + containerBoundingRect.width) -
         this.boundingClientRect.left -
         this.width / 2;
     }
     if (this.axis.y) {
-      this.minTranslate.y = (useWindowAsScrollContainer
-        ? 0
-        : containerBoundingRect.top) -
+      this.minTranslate.y =
+        (useWindowAsScrollContainer ? 0 : containerBoundingRect.top) -
         this.boundingClientRect.top -
         this.height / 2;
-      this.maxTranslate.y = (useWindowAsScrollContainer
-        ? list.contentWindow.innerHeight
-        : containerBoundingRect.top + containerBoundingRect.height) -
+      this.maxTranslate.y =
+        (useWindowAsScrollContainer
+          ? list.contentWindow.innerHeight
+          : containerBoundingRect.top + containerBoundingRect.height) -
         this.boundingClientRect.top -
         this.height / 2;
     }
@@ -59,10 +96,7 @@ export default class DragLayer {
     const activeNode = list.manager.getActive();
 
     if (activeNode) {
-      const {
-        axis,
-        getHelperDimensions,
-      } = list.props;
+      const {axis, getHelperDimensions} = list.props;
       const {node, collection} = activeNode;
       const {index} = node.sortableInfo;
       const margin = getElementMargin(node);
@@ -95,16 +129,16 @@ export default class DragLayer {
       const clonedNode = node.cloneNode(true);
       const clonedFields = [
         ...clonedNode.querySelectorAll('input, textarea, select, canvas'),
-      ]; // Convert NodeList to Array
+      ];
 
-      clonedFields.forEach((field, index) => {
-        if (field.tagName === 'CANVAS') {
-          if (fields[index].tagName === 'CANVAS') {
-            const destCtx = field.getContext('2d');
-            destCtx.drawImage(fields[index], 0, 0);
-          }
-        } else if (field.type !== 'file' && fields[index]) {
-          field.value = fields[index].value;
+      clonedFields.forEach((field, i) => {
+        if (field.type !== 'file' && fields[index]) {
+          field.value = fields[i].value;
+        }
+
+        if (field.tagName === NodeType.Canvas) {
+          const destCtx = field.getContext('2d');
+          destCtx.drawImage(fields[index], 0, 0);
         }
       });
 
@@ -122,18 +156,20 @@ export default class DragLayer {
       this.setTranslateBoundaries(containerBoundingRect, list);
 
       this.listenerNode = event.touches ? node : list.contentWindow;
-      events.move.forEach(eventName =>
+      events.move.forEach((eventName) =>
         this.listenerNode.addEventListener(
           eventName,
           this.handleSortMove,
           false,
-        ));
-      events.end.forEach(eventName =>
+        ),
+      );
+      events.end.forEach((eventName) =>
         this.listenerNode.addEventListener(
           eventName,
           this.handleSortEnd,
           false,
-        ));
+        ),
+      );
 
       return activeNode;
     }
@@ -144,52 +180,20 @@ export default class DragLayer {
     this.handleSortEnd();
   }
 
-  handleSortMove = event => {
-    event.preventDefault(); // Prevent scrolling on mobile
-    this.updatePosition(event);
-    this.updateTargetContainer(event);
-    if (this.targetList) {
-      this.targetList.handleSortMove(event);
-    }
-  };
-
-  handleSortEnd = event => {
-    if (this.listenerNode) {
-      events.move.forEach(eventName =>
-        this.listenerNode.removeEventListener(eventName, this.handleSortMove));
-      events.end.forEach(eventName =>
-        this.listenerNode.removeEventListener(eventName, this.handleSortEnd));
-    }
-
-    if (typeof this.onDragEnd === 'function') {
-      this.onDragEnd();
-    }
-    // Remove the helper from the DOM
-    if (this.helper) {
-      this.helper.parentNode.removeChild(this.helper);
-      this.helper = null;
-      this.targetList.handleSortEnd(event);
-    }
-
-    // Reset window scroll & container height diff
-    this.lists.forEach(list => {
-      delete list.initialWindowScroll;
-    });
-  };
-
   updatePosition(event) {
     const {lockAxis, lockToContainerEdges} = this.targetList.props;
-    const position = getPosition(event);
+    const offset = getPosition(event);
     const translate = {
-      x: position.x - this.initialOffset.x,
-      y: position.y - this.initialOffset.y,
+      x: offset.x - this.initialOffset.x,
+      y: offset.y - this.initialOffset.y,
     };
     // Adjust for window scroll
-    translate.y -= (window.pageYOffset - this.targetList.initialWindowScroll.top);
-    translate.x -= (window.pageXOffset - this.targetList.initialWindowScroll.left);
+    translate.y -= window.pageYOffset - this.targetList.initialWindowScroll.top;
+    translate.x -=
+      window.pageXOffset - this.targetList.initialWindowScroll.left;
 
     this.translate = translate;
-    this.delta = position;
+    this.delta = offset;
 
     if (lockToContainerEdges) {
       const [
@@ -208,12 +212,12 @@ export default class DragLayer {
       translate.x = limit(
         this.minTranslate.x + minOffset.x,
         this.maxTranslate.x - maxOffset.x,
-          translate.x
+        translate.x,
       );
       translate.y = limit(
         this.minTranslate.y + minOffset.y,
         this.maxTranslate.y - maxOffset.y,
-          translate.y,
+        translate.y,
       );
     }
 
@@ -223,16 +227,16 @@ export default class DragLayer {
       translate.x = 0;
     }
 
-    this.helper.style[
-      `${vendorPrefix}Transform`
-    ] = `translate3d(${translate.x}px,${translate.y}px, 0)`;
+    this.helper.style[`${vendorPrefix}Transform`] = `translate3d(${
+      translate.x
+    }px,${translate.y}px, 0)`;
   }
 
   updateTargetContainer(event) {
     const {x, y} = this.delta;
     const originList = this.targetList;
     const targetList = this.lists[
-      closestRect(x, y, this.lists.map(l => l.container))
+      closestRect(x, y, this.lists.map((list) => list.container))
     ];
     const {item} = this.targetList.manager.active;
     this.active = item;
@@ -264,7 +268,7 @@ export default class DragLayer {
       this.distanceBetweenContainers = updateDistanceBetweenContainers(
         this.distanceBetweenContainers,
         targetList,
-        originList
+        originList,
       );
 
       const targetListRect = targetList.container.getBoundingClientRect();
@@ -272,7 +276,9 @@ export default class DragLayer {
       // If we're moving up the container ...
       if (targetListRect.top < cachedOriginListRect.top) {
         // Calculate any height difference that has occurred on the target container during the DND
-        const targetListContainerHeightDelta = Math.abs(cachedTargetListRect.height - targetListRect.height);
+        const targetListContainerHeightDelta = Math.abs(
+          cachedTargetListRect.height - targetListRect.height,
+        );
         this.distanceBetweenContainers.y += targetListContainerHeightDelta;
       }
     }

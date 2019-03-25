@@ -15,8 +15,9 @@ export function distanceRect(x, y, rect) {
 }
 
 export function closestRect(x, y, containers) {
-  const distances = containers.map(c =>
-    distanceRect(x, y, c.getBoundingClientRect()));
+  const distances = containers.map((container) =>
+    distanceRect(x, y, container.getBoundingClientRect()),
+  );
   return distances.indexOf(Math.min(...distances));
 }
 
@@ -33,13 +34,18 @@ export function updateDistanceBetweenContainers(
   container2,
 ) {
   const {x, y} = distance;
-  const d = getDelta(
-    ...[container1, container2].map(c => c.container.getBoundingClientRect()),
+  const delta = getDelta(
+    ...[container1, container2].map((cont) =>
+      cont.container.getBoundingClientRect(),
+    ),
   );
-  const scrollDX = container2.scrollContainer.scrollLeft - container1.scrollContainer.scrollLeft;
-  const scrollDY = container2.scrollContainer.scrollTop - container1.scrollContainer.scrollTop;
+  const scrollDX =
+    container2.scrollContainer.scrollLeft -
+    container1.scrollContainer.scrollLeft;
+  const scrollDY =
+    container2.scrollContainer.scrollTop - container1.scrollContainer.scrollTop;
   return {
-    x: x + d.x + scrollDX,
-    y: y + d.y + scrollDY,
+    x: x + delta.x + scrollDX,
+    y: y + delta.y + scrollDY,
   };
 }
