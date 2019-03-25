@@ -51,6 +51,8 @@ export type ContainerGetter = (
   element: React.ReactElement<any>,
 ) => HTMLElement | Promise<HTMLElement>;
 
+export type HelperContainerGetter = () => HTMLElement;
+
 export interface Dimensions {
   width: number;
   height: number;
@@ -92,7 +94,7 @@ export interface SortableContainerProps {
   lockOffset?: Offset | [Offset, Offset];
   getContainer?: ContainerGetter;
   getHelperDimensions?: (sort: SortStart) => Dimensions;
-  helperContainer?: HTMLElement;
+  helperContainer?: HTMLElement | HelperContainerGetter;
 }
 
 export interface SortableElementProps {
