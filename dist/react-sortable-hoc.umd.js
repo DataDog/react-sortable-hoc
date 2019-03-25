@@ -309,21 +309,8 @@
    * LICENSE file in the root directory of this source tree.
    */
 
-  /**
-   * Use invariant() to assert state which your program assumes to be true.
-   *
-   * Provide sprintf-style format (only %s is supported) and arguments
-   * to provide information about what broke and what you were
-   * expecting.
-   *
-   * The invariant message will be stripped in production, but the invariant
-   * will remain to ensure logic does not differ in production.
-   */
-
-  var NODE_ENV = process.env.NODE_ENV;
-
   var invariant = function(condition, format, a, b, c, d, e, f) {
-    if (NODE_ENV !== 'production') {
+    {
       if (format === undefined) {
         throw new Error('invariant requires an error message argument');
       }
@@ -3702,6 +3689,14 @@
   var objectSpread = _objectSpread;
 
   function arrayMove(array, from, to) {
+    {
+      if (typeof console !== 'undefined') {
+        console.warn(
+          "Deprecation warning: arrayMove will no longer be exported by 'react-sortable-hoc' in the next major release. Please install the `array-move` package locally instead. https://www.npmjs.com/package/array-move",
+        );
+      }
+    }
+
     array = array.slice();
     array.splice(to < 0 ? array.length + to : to, 0, array.splice(from, 1)[0]);
     return array;
@@ -3874,6 +3869,25 @@
       x: offsetX,
       y: offsetY,
     };
+  }
+
+  function isScrollable(el) {
+    var computedStyle = window.getComputedStyle(el);
+    var overflowRegex = /(auto|scroll)/;
+    var properties = ['overflow', 'overflowX', 'overflowY'];
+    return properties.find(function(property) {
+      return overflowRegex.test(computedStyle[property]);
+    });
+  }
+
+  function getScrollingParent(el) {
+    if (!el) {
+      return null;
+    } else if (isScrollable(el)) {
+      return el;
+    } else {
+      return getScrollingParent(el.parentNode);
+    }
   }
   var NodeType = {
     Anchor: 'A',
@@ -4057,7 +4071,7 @@
               collection = activeNode.collection;
             var index = node.sortableInfo.index;
             var margin = getElementMargin(node);
-            var containerBoundingRect = list.container.getBoundingClientRect();
+            var containerBoundingRect = list.scrollContainer.getBoundingClientRect();
             var dimensions = getHelperDimensions({
               index: index,
               node: node,
@@ -4803,8 +4817,8 @@
                       y: _axis.indexOf('y') >= 0,
                     };
                     _this.initialScroll = {
-                      top: _this.container.scrollTop,
-                      left: _this.container.scrollLeft,
+                      top: _this.scrollContainer.scrollTop,
+                      left: _this.scrollContainer.scrollLeft,
                     };
                     _this.initialWindowScroll = {
                       top: window.pageYOffset,
@@ -5270,7 +5284,7 @@
                 _this2.scrollContainer = useWindowAsScrollContainer
                   ? _this2.document.scrollingElement ||
                     _this2.document.documentElement
-                  : _this2.container;
+                  : getScrollingParent(_this2.container) || _this2.container;
                 _this2.initialScroll = {
                   top: _this2.scrollContainer.scrollTop,
                   left: _this2.scrollContainer.scrollLeft,
@@ -5380,8 +5394,8 @@
                 animateNodes = _this$props5.animateNodes;
               var nodes = this.manager.getOrderedRefs();
               var containerScrollDelta = {
-                left: this.container.scrollLeft - this.initialScroll.left,
-                top: this.container.scrollTop - this.initialScroll.top,
+                left: this.scrollContainer.scrollLeft - this.initialScroll.left,
+                top: this.scrollContainer.scrollTop - this.initialScroll.top,
               };
               var sortingOffset = {
                 left:
