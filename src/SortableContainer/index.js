@@ -5,6 +5,7 @@ import invariant from 'invariant';
 import findIndex from 'lodash/findIndex';
 import isPlainObject from 'lodash/isPlainObject';
 import DragLayer from '../DragLayer';
+import {closestRect} from '../DragLayer/utils';
 import Manager from '../Manager';
 import {
   closest,
@@ -18,8 +19,6 @@ import {
   omit,
   getScrollingParent,
 } from '../utils';
-import {closestRect} from '../DragLayer/utils';
-import 'classlist-polyfill';
 
 export default function sortableContainer(
   WrappedComponent,
@@ -44,7 +43,6 @@ export default function sortableContainer(
       );
 
       this.state = {};
-      this.sorting = false;
     }
 
     static displayName = provideDisplayName('sortableList', WrappedComponent);
@@ -57,7 +55,6 @@ export default function sortableContainer(
       distance: 0,
       useWindowAsScrollContainer: false,
       hideSortableGhost: true,
-      animateNodes: true,
       shouldCancelStart(event) {
         // Cancel sorting if the event target is an `input`, `textarea`, `select` or `option`
         const disabledElements = [
@@ -84,12 +81,12 @@ export default function sortableContainer(
         height: node.offsetHeight,
       }),
       disableAutoscroll: false,
+      animateNodes: true,
     };
 
     static propTypes = {
       axis: PropTypes.oneOf(['x', 'y', 'xy']),
       distance: PropTypes.number,
-      dragLayer: PropTypes.object,
       lockAxis: PropTypes.string,
       helperClass: PropTypes.string,
       transitionDuration: PropTypes.number,
@@ -99,12 +96,10 @@ export default function sortableContainer(
       onSortMove: PropTypes.func,
       onSortOver: PropTypes.func,
       onSortEnd: PropTypes.func,
-      onDragEnd: PropTypes.func,
       shouldCancelStart: PropTypes.func,
       pressDelay: PropTypes.number,
       pressThreshold: PropTypes.number,
       useDragHandle: PropTypes.bool,
-      animateNodes: PropTypes.bool,
       useWindowAsScrollContainer: PropTypes.bool,
       hideSortableGhost: PropTypes.bool,
       lockToContainerEdges: PropTypes.bool,
@@ -124,6 +119,9 @@ export default function sortableContainer(
           : PropTypes.instanceOf(HTMLElement),
       ]),
       disableAutoscroll: PropTypes.bool,
+      dragLayer: PropTypes.object,
+      onDragEnd: PropTypes.func,
+      animateNodes: PropTypes.bool,
     };
 
     static childContextTypes = {
@@ -160,6 +158,7 @@ export default function sortableContainer(
         this.scrollContainer = useWindowAsScrollContainer
           ? this.document.scrollingElement || this.document.documentElement
           : getScrollingParent(this.container) || this.container;
+
         this.initialScroll = {
           top: this.scrollContainer.scrollTop,
           left: this.scrollContainer.scrollLeft,
@@ -181,6 +180,7 @@ export default function sortableContainer(
 
     componentWillUnmount() {
       this.dragLayer.removeRef(this);
+
       if (this.container) {
         for (const key in this.events) {
           if (this.events.hasOwnProperty(key)) {
@@ -234,7 +234,7 @@ export default function sortableContainer(
         node &&
         node.sortableInfo &&
         this.nodeIsChild(node) &&
-        !this.sorting
+        !this.state.sorting
       ) {
         const {useDragHandle} = this.props;
         const {index, collection, disabled} = node.sortableInfo;
@@ -283,8 +283,9 @@ export default function sortableContainer(
 
     handleMove = (event) => {
       const {distance, pressThreshold} = this.props;
+
       if (
-        !this.sorting &&
+        !this.state.sorting &&
         this._touched &&
         !this._awaitingUpdateBeforeSortStart
       ) {
@@ -321,8 +322,9 @@ export default function sortableContainer(
 
     cancel = () => {
       const {distance} = this.props;
+      const {sorting} = this.state;
 
-      if (!this.sorting) {
+      if (!sorting) {
         if (!distance) {
           clearTimeout(this.pressTimer);
         }
@@ -365,6 +367,7 @@ export default function sortableContainer(
 
         this.index = index;
         this.newIndex = index;
+
         this.axis = {
           x: axis.indexOf('x') >= 0,
           y: axis.indexOf('y') >= 0,
@@ -390,8 +393,10 @@ export default function sortableContainer(
           this.dragLayer.helper.classList.add(...helperClass.split(' '));
         }
 
-        this.sorting = true;
-        this.sortingIndex = index;
+        this.setState({
+          sorting: true,
+          sortingIndex: index,
+        });
 
         if (onSortStart) {
           onSortStart({node, index, collection}, event);
@@ -440,10 +445,11 @@ export default function sortableContainer(
 
     handleSortEnd = (event, newList = null) => {
       const {hideSortableGhost, onSortEnd} = this.props;
+      const {collection} = this.manager.active;
+
       if (!this.manager.active) {
         return;
       }
-      const {collection} = this.manager.active;
 
       // Remove the move handler if there's a frame that hasn't run yet.
       if (window.cancelAnimationFrame && this.sortMoveAF) {
@@ -476,8 +482,10 @@ export default function sortableContainer(
       // Update state
       this.manager.active = null;
 
-      this.sorting = false;
-      this.sortingIndex = null;
+      this.setState({
+        sorting: false,
+        sortingIndex: null,
+      });
 
       if (typeof onSortEnd === 'function') {
         // get the index in the new list
@@ -497,16 +505,6 @@ export default function sortableContainer(
       }
 
       this._touched = false;
-    };
-
-    handleSortSwap = (index, item) => {
-      const {onSortSwap} = this.props;
-      if (typeof onSortSwap === 'function') {
-        onSortSwap({
-          index,
-          item,
-        });
-      }
     };
 
     getLockPixelOffsets() {
@@ -530,63 +528,6 @@ export default function sortableContainer(
         getLockPixelOffset({lockOffset: maxLockOffset, width, height}),
       ];
     }
-
-    getClosestNode = (event) => {
-      const position = getPosition(event);
-      // eslint-disable-next-line
-      let closestNodes = [];
-      // eslint-disable-next-line
-      let closestCollections = [];
-
-      Object.keys(this.manager.refs).forEach((collection) => {
-        const nodes = this.manager.refs[collection].map((ref) => ref.node);
-        if (nodes && nodes.length > 0) {
-          closestNodes.push(nodes[closestRect(position.x, position.y, nodes)]);
-          closestCollections.push(collection);
-        }
-      });
-      const index = closestRect(position.x, position.y, closestNodes);
-      const collection = closestCollections[index];
-      if (collection === undefined) {
-        return {
-          collection,
-          index: 0,
-        };
-      }
-      const finalNodes = this.manager.refs[collection].map((ref) => ref.node);
-      const finalIndex = finalNodes.indexOf(closestNodes[index]);
-      const node = closestNodes[index];
-      const rect = node.getBoundingClientRect();
-      return {
-        collection,
-        index: finalIndex + (position.y > rect.bottom ? 1 : 0),
-      };
-    };
-
-    checkActive = (event) => {
-      const active = this.manager.active;
-      if (!active) {
-        // find closest collection
-        const node = closest(event.target, (el) => el.sortableInfo != null);
-        if (node && node.sortableInfo) {
-          const pos = getPosition(event);
-          const {collection} = node.sortableInfo;
-          const nodes = this.manager.refs[collection].map((ref) => ref.node);
-          // find closest index in collection
-          if (nodes) {
-            const index = closestRect(pos.x, pos.y, nodes);
-            this.manager.active = {
-              index,
-              collection,
-              item: this.props.items[index],
-            };
-            this.handlePress(event);
-          }
-        }
-        return false;
-      }
-      return true;
-    };
 
     animateNodes() {
       if (!this.axis) {
@@ -943,6 +884,75 @@ export default function sortableContainer(
       );
     }
 
+    // -- DD methods --
+
+    handleSortSwap = (index, item) => {
+      const {onSortSwap} = this.props;
+      if (typeof onSortSwap === 'function') {
+        onSortSwap({
+          index,
+          item,
+        });
+      }
+    };
+
+    getClosestNode = (event) => {
+      const position = getPosition(event);
+      // eslint-disable-next-line
+      let closestNodes = [];
+      // eslint-disable-next-line
+      let closestCollections = [];
+
+      Object.keys(this.manager.refs).forEach((collection) => {
+        const nodes = this.manager.refs[collection].map((ref) => ref.node);
+        if (nodes && nodes.length > 0) {
+          closestNodes.push(nodes[closestRect(position.x, position.y, nodes)]);
+          closestCollections.push(collection);
+        }
+      });
+      const index = closestRect(position.x, position.y, closestNodes);
+      const collection = closestCollections[index];
+      if (collection === undefined) {
+        return {
+          collection,
+          index: 0,
+        };
+      }
+      const finalNodes = this.manager.refs[collection].map((ref) => ref.node);
+      const finalIndex = finalNodes.indexOf(closestNodes[index]);
+      const node = closestNodes[index];
+      const rect = node.getBoundingClientRect();
+      return {
+        collection,
+        index: finalIndex + (position.y > rect.bottom ? 1 : 0),
+      };
+    };
+
+    checkActive = (event) => {
+      const active = this.manager.active;
+      if (!active) {
+        // find closest collection
+        const node = closest(event.target, (el) => el.sortableInfo != null);
+        if (node && node.sortableInfo) {
+          const pos = getPosition(event);
+          const {collection} = node.sortableInfo;
+          const nodes = this.manager.refs[collection].map((ref) => ref.node);
+          // find closest index in collection
+          if (nodes) {
+            const index = closestRect(pos.x, pos.y, nodes);
+            this.manager.active = {
+              index,
+              collection,
+              item: this.props.items[index],
+            };
+            this.handlePress(event);
+          }
+        }
+        return false;
+      }
+      return true;
+    };
+
     render() {
       const ref = config.withRef ? 'wrappedInstance' : null;
 
@@ -958,7 +968,6 @@ export default function sortableContainer(
             'hideSortableGhost',
             'transitionDuration',
             'useDragHandle',
-            'animateNodes',
             'pressDelay',
             'pressThreshold',
             'shouldCancelStart',
@@ -975,6 +984,7 @@ export default function sortableContainer(
             'getHelperDimensions',
             'helperContainer',
             'disableAutoscroll',
+            'animateNodes',
           )}
         />
       );
