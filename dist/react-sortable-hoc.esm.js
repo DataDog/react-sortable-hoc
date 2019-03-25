@@ -744,7 +744,12 @@ function sortableContainer(WrappedComponent) {
             var useDragHandle = _this.props.useDragHandle;
             var _node$sortableInfo = node.sortableInfo,
               index = _node$sortableInfo.index,
-              collection = _node$sortableInfo.collection;
+              collection = _node$sortableInfo.collection,
+              disabled = _node$sortableInfo.disabled;
+
+            if (disabled) {
+              return;
+            }
 
             if (
               useDragHandle &&
@@ -1851,58 +1856,46 @@ function sortableElement(WrappedComponent) {
         {
           key: 'componentDidMount',
           value: function componentDidMount() {
-            var _this$props = this.props,
-              collection = _this$props.collection,
-              disabled = _this$props.disabled,
-              index = _this$props.index;
-
-            if (!disabled) {
-              this.setDraggable(collection, index);
-            }
+            this.register();
           },
         },
         {
-          key: 'componentWillReceiveProps',
-          value: function componentWillReceiveProps(nextProps) {
-            if (this.props.index !== nextProps.index && this.node) {
-              this.node.sortableInfo.index = nextProps.index;
+          key: 'componentDidUpdate',
+          value: function componentDidUpdate(prevProps) {
+            if (this.node) {
+              if (prevProps.index !== this.props.index) {
+                this.node.sortableInfo.index = this.props.index;
+              }
+
+              if (prevProps.disabled !== this.props.disabled) {
+                this.node.sortableInfo.disabled = this.props.disabled;
+              }
             }
 
-            if (this.props.disabled !== nextProps.disabled) {
-              var collection = nextProps.collection,
-                disabled = nextProps.disabled,
-                index = nextProps.index;
-
-              if (disabled) {
-                this.removeDraggable(collection);
-              } else {
-                this.setDraggable(collection, index);
-              }
-            } else if (this.props.collection !== nextProps.collection) {
-              this.removeDraggable(this.props.collection);
-              this.setDraggable(nextProps.collection, nextProps.index);
+            if (prevProps.collection !== this.props.collection) {
+              this.unregister(prevProps.collection);
+              this.register();
             }
           },
         },
         {
           key: 'componentWillUnmount',
           value: function componentWillUnmount() {
-            var _this$props2 = this.props,
-              collection = _this$props2.collection,
-              disabled = _this$props2.disabled;
-
-            if (!disabled) {
-              this.removeDraggable(collection);
-            }
+            this.unregister();
           },
         },
         {
-          key: 'setDraggable',
-          value: function setDraggable(collection, index) {
+          key: 'register',
+          value: function register() {
+            var _this$props = this.props,
+              collection = _this$props.collection,
+              disabled = _this$props.disabled,
+              index = _this$props.index;
             var node = findDOMNode(this);
             node.sortableInfo = {
               index: index,
               collection: collection,
+              disabled: disabled,
               manager: this.context.manager,
             };
             this.node = node;
@@ -1913,8 +1906,12 @@ function sortableElement(WrappedComponent) {
           },
         },
         {
-          key: 'removeDraggable',
-          value: function removeDraggable(collection) {
+          key: 'unregister',
+          value: function unregister() {
+            var collection =
+              arguments.length > 0 && arguments[0] !== undefined
+                ? arguments[0]
+                : this.props.collection;
             this.context.manager.remove(collection, this.ref);
           },
         },
