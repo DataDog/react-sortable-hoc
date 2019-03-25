@@ -100,7 +100,7 @@ export default class DragLayer {
       const {node, collection} = activeNode;
       const {index} = node.sortableInfo;
       const margin = getElementMargin(node);
-      const containerBoundingRect = list.container.getBoundingClientRect();
+      const containerBoundingRect = list.scrollContainer.getBoundingClientRect();
       const dimensions = getHelperDimensions({index, node, collection});
 
       this.width = dimensions.width;
