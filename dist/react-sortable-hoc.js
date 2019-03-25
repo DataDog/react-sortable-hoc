@@ -1213,10 +1213,22 @@ function sortableContainer(WrappedComponent) {
               x: 10,
               y: 10,
             };
+            var _this$scrollContainer = _this.scrollContainer,
+              scrollTop = _this$scrollContainer.scrollTop,
+              scrollLeft = _this$scrollContainer.scrollLeft,
+              scrollHeight = _this$scrollContainer.scrollHeight,
+              scrollWidth = _this$scrollContainer.scrollWidth,
+              clientHeight = _this$scrollContainer.clientHeight,
+              clientWidth = _this$scrollContainer.clientWidth;
+            var isTop = scrollTop === 0;
+            var isBottom = scrollHeight - scrollTop - clientHeight === 0;
+            var isLeft = scrollLeft === 0;
+            var isRight = scrollWidth - scrollLeft - clientWidth === 0;
 
             if (
               translate.y >=
-              _this.dragLayer.maxTranslate.y - _this.dragLayer.height / 2
+                _this.dragLayer.maxTranslate.y - _this.dragLayer.height / 2 &&
+              !isBottom
             ) {
               direction.y = 1;
               speed.y =
@@ -1229,7 +1241,8 @@ function sortableContainer(WrappedComponent) {
                 );
             } else if (
               translate.x >=
-              _this.dragLayer.maxTranslate.x - _this.dragLayer.width / 2
+                _this.dragLayer.maxTranslate.x - _this.dragLayer.width / 2 &&
+              !isRight
             ) {
               direction.x = 1;
               speed.x =
@@ -1242,7 +1255,8 @@ function sortableContainer(WrappedComponent) {
                 );
             } else if (
               translate.y <=
-              _this.dragLayer.minTranslate.y + _this.dragLayer.height / 2
+                _this.dragLayer.minTranslate.y + _this.dragLayer.height / 2 &&
+              !isTop
             ) {
               direction.y = -1;
               speed.y =
@@ -1255,7 +1269,8 @@ function sortableContainer(WrappedComponent) {
                 );
             } else if (
               translate.x <=
-              _this.dragLayer.minTranslate.x + _this.dragLayer.width / 2
+                _this.dragLayer.minTranslate.x + _this.dragLayer.width / 2 &&
+              !isLeft
             ) {
               direction.x = -1;
               speed.x =
@@ -1547,8 +1562,11 @@ function sortableContainer(WrappedComponent) {
                       edgeOffset.left + translate.x >
                       this.dragLayer.containerBoundingRect.width - offset.width
                     ) {
-                      translate.x = nextNode.edgeOffset.left - edgeOffset.left;
-                      translate.y = nextNode.edgeOffset.top - edgeOffset.top;
+                      if (nextNode) {
+                        translate.x =
+                          nextNode.edgeOffset.left - edgeOffset.left;
+                        translate.y = nextNode.edgeOffset.top - edgeOffset.top;
+                      }
                     }
 
                     if (this.newIndex === null) {
@@ -1577,8 +1595,11 @@ function sortableContainer(WrappedComponent) {
                       edgeOffset.left + translate.x <
                       this.dragLayer.containerBoundingRect.left + offset.width
                     ) {
-                      translate.x = prevNode.edgeOffset.left - edgeOffset.left;
-                      translate.y = prevNode.edgeOffset.top - edgeOffset.top;
+                      if (prevNode) {
+                        translate.x =
+                          prevNode.edgeOffset.left - edgeOffset.left;
+                        translate.y = prevNode.edgeOffset.top - edgeOffset.top;
+                      }
                     }
 
                     this.newIndex = _index3;
