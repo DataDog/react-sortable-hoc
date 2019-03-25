@@ -339,6 +339,7 @@ export default function sortableContainer(
           updateBeforeSortStart,
           onSortStart,
         } = this.props;
+
         const {node, collection} = active;
         const {index} = node.sortableInfo;
 
