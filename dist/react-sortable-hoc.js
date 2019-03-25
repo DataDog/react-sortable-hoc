@@ -427,16 +427,19 @@ var DragLayer = (function() {
             clonedNode.querySelectorAll('input, textarea, select, canvas'),
           );
 
-          clonedFields.forEach(function(field, i) {
-            if (field.type !== 'file' && fields[index]) {
-              field.value = fields[i].value;
-            }
+          if (fields[index]) {
+            clonedFields.forEach(function(field, i) {
+              if (field.type !== 'file') {
+                field.value = fields[i].value;
+              }
 
-            if (field.tagName === NodeType.Canvas) {
-              var destCtx = field.getContext('2d');
-              destCtx.drawImage(fields[index], 0, 0);
-            }
-          });
+              if (field.tagName === NodeType.Canvas) {
+                var destCtx = field.getContext('2d');
+                destCtx.drawImage(fields[index], 0, 0);
+              }
+            });
+          }
+
           this.helper = parent.appendChild(clonedNode);
           this.helper.style.position = 'fixed';
           this.helper.style.top = ''.concat(
@@ -1710,6 +1713,7 @@ function sortableContainer(WrappedComponent) {
                   'lockToContainerEdges',
                   'getContainer',
                   'getHelperDimensions',
+                  'helperContainer',
                 ),
               ),
             );
@@ -1718,6 +1722,12 @@ function sortableContainer(WrappedComponent) {
         {
           key: 'helperContainer',
           get: function get() {
+            var helperContainer = this.props.helperContainer;
+
+            if (typeof helperContainer === 'function') {
+              return helperContainer();
+            }
+
             return this.props.helperContainer || this.document.body;
           },
         },
@@ -1797,10 +1807,12 @@ function sortableContainer(WrappedComponent) {
       ]),
       getContainer: PropTypes.func,
       getHelperDimensions: PropTypes.func,
-      helperContainer:
+      helperContainer: PropTypes.oneOfType([
+        PropTypes.func,
         typeof HTMLElement === 'undefined'
           ? PropTypes.any
           : PropTypes.instanceOf(HTMLElement),
+      ]),
     }),
     _defineProperty(_class, 'childContextTypes', {
       manager: PropTypes.object.isRequired,

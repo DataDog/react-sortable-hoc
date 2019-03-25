@@ -131,16 +131,18 @@ export default class DragLayer {
         ...clonedNode.querySelectorAll('input, textarea, select, canvas'),
       ];
 
-      clonedFields.forEach((field, i) => {
-        if (field.type !== 'file' && fields[index]) {
-          field.value = fields[i].value;
-        }
+      if (fields[index]) {
+        clonedFields.forEach((field, i) => {
+          if (field.type !== 'file') {
+            field.value = fields[i].value;
+          }
 
-        if (field.tagName === NodeType.Canvas) {
-          const destCtx = field.getContext('2d');
-          destCtx.drawImage(fields[index], 0, 0);
-        }
-      });
+          if (field.tagName === NodeType.Canvas) {
+            const destCtx = field.getContext('2d');
+            destCtx.drawImage(fields[index], 0, 0);
+          }
+        });
+      }
 
       this.helper = parent.appendChild(clonedNode);
 

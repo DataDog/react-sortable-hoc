@@ -4091,16 +4091,19 @@
               clonedNode.querySelectorAll('input, textarea, select, canvas'),
             );
 
-            clonedFields.forEach(function(field, i) {
-              if (field.type !== 'file' && fields[index]) {
-                field.value = fields[i].value;
-              }
+            if (fields[index]) {
+              clonedFields.forEach(function(field, i) {
+                if (field.type !== 'file') {
+                  field.value = fields[i].value;
+                }
 
-              if (field.tagName === NodeType.Canvas) {
-                var destCtx = field.getContext('2d');
-                destCtx.drawImage(fields[index], 0, 0);
-              }
-            });
+                if (field.tagName === NodeType.Canvas) {
+                  var destCtx = field.getContext('2d');
+                  destCtx.drawImage(fields[index], 0, 0);
+                }
+              });
+            }
+
             this.helper = parent.appendChild(clonedNode);
             this.helper.style.position = 'fixed';
             this.helper.style.top = ''.concat(
@@ -5616,6 +5619,7 @@
                     'lockToContainerEdges',
                     'getContainer',
                     'getHelperDimensions',
+                    'helperContainer',
                   ),
                 ),
               );
@@ -5624,6 +5628,12 @@
           {
             key: 'helperContainer',
             get: function get() {
+              var helperContainer = this.props.helperContainer;
+
+              if (typeof helperContainer === 'function') {
+                return helperContainer();
+              }
+
               return this.props.helperContainer || this.document.body;
             },
           },
@@ -5703,10 +5713,12 @@
         ]),
         getContainer: PropTypes.func,
         getHelperDimensions: PropTypes.func,
-        helperContainer:
+        helperContainer: PropTypes.oneOfType([
+          PropTypes.func,
           typeof HTMLElement === 'undefined'
             ? PropTypes.any
             : PropTypes.instanceOf(HTMLElement),
+        ]),
       }),
       defineProperty(_class, 'childContextTypes', {
         manager: PropTypes.object.isRequired,
