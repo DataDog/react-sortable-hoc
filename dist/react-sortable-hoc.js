@@ -202,10 +202,49 @@ function getEdgeOffset(node, parent) {
 
   return getEdgeOffset(node.parentNode, parent, nodeOffset);
 }
-function getLockPixelOffsets(_ref) {
-  var height = _ref.height,
+
+function getLockPixelOffset(_ref) {
+  var lockOffset = _ref.lockOffset,
     width = _ref.width,
-    lockOffset = _ref.lockOffset;
+    height = _ref.height;
+  var offsetX = lockOffset;
+  var offsetY = lockOffset;
+  var unit = 'px';
+
+  if (typeof lockOffset === 'string') {
+    var match = /^[+-]?\d*(?:\.\d*)?(px|%)$/.exec(lockOffset);
+    invariant(
+      match !== null,
+      'lockOffset value should be a number or a string of a ' +
+        'number followed by "px" or "%". Given %s',
+      lockOffset,
+    );
+    offsetX = parseFloat(lockOffset);
+    offsetY = parseFloat(lockOffset);
+    unit = match[1];
+  }
+
+  invariant(
+    isFinite(offsetX) && isFinite(offsetY),
+    'lockOffset value should be a finite. Given %s',
+    lockOffset,
+  );
+
+  if (unit === '%') {
+    offsetX = (offsetX * width) / 100;
+    offsetY = (offsetY * height) / 100;
+  }
+
+  return {
+    x: offsetX,
+    y: offsetY,
+  };
+}
+
+function getLockPixelOffsets(_ref2) {
+  var height = _ref2.height,
+    width = _ref2.width,
+    lockOffset = _ref2.lockOffset;
   var offsets = Array.isArray(lockOffset)
     ? lockOffset
     : [lockOffset, lockOffset];
@@ -261,7 +300,29 @@ var NodeType = {
   Textarea: 'TEXTAREA',
   Select: 'SELECT',
 };
+function cloneNode(node) {
+  var selector = 'input, textarea, select, canvas, [contenteditable]';
+  var fields = node.querySelectorAll(selector);
+  var clonedNode = node.cloneNode(true);
 
+  var clonedFields = _toConsumableArray(clonedNode.querySelectorAll(selector));
+
+  clonedFields.forEach(function(field, i) {
+    if (field.type !== 'file') {
+      field.value = fields[i].value;
+    }
+
+    if (field.type === 'radio' && field.name) {
+      field.name = '__sortableClone__'.concat(field.name);
+    }
+
+    if (field.tagName === NodeType.Canvas) {
+      var destCtx = field.getContext('2d');
+      destCtx.drawImage(fields[i], 0, 0);
+    }
+  });
+  return clonedNode;
+}
 function distanceRect(x, y, rect) {
   var pageXOffset = window.pageXOffset;
   var pageYOffset = window.pageYOffset;
@@ -457,24 +518,7 @@ var DragLayer = (function() {
             x: 0,
             y: 0,
           };
-          var fields = node.querySelectorAll('input, textarea, select, canvas');
-          var clonedNode = node.cloneNode(true);
-
-          var clonedFields = _toConsumableArray(
-            clonedNode.querySelectorAll('input, textarea, select, canvas'),
-          );
-
-          clonedFields.forEach(function(field, i) {
-            if (field.type !== 'file' && fields[index]) {
-              field.value = fields[i].value;
-            }
-
-            if (field.tagName === NodeType.Canvas) {
-              var destCtx = field.getContext('2d');
-              destCtx.drawImage(fields[i], 0, 0);
-            }
-          });
-          this.helper = parent.appendChild(clonedNode);
+          this.helper = parent.appendChild(cloneNode(node));
           setInlineStyles(this.helper, {
             boxSizing: 'border-box',
             height: ''.concat(this.height, 'px'),
@@ -890,7 +934,7 @@ function defaultGetHelperDimensions(_ref) {
 }
 
 function defaultShouldCancelStart(event) {
-  var disabledElements = [
+  var interactiveElements = [
     NodeType.Input,
     NodeType.Textarea,
     NodeType.Select,
@@ -898,7 +942,15 @@ function defaultShouldCancelStart(event) {
     NodeType.Button,
   ];
 
-  if (disabledElements.indexOf(event.target.tagName) !== -1) {
+  if (interactiveElements.indexOf(event.target.tagName) !== -1) {
+    return true;
+  }
+
+  if (
+    closest(event.target, function(el) {
+      return el.contentEditable === 'true';
+    })
+  ) {
     return true;
   }
 

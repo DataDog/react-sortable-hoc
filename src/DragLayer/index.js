@@ -1,4 +1,6 @@
 import {
+  cloneNode,
+  closestRect,
   events,
   getPosition,
   getElementMargin,
@@ -7,9 +9,8 @@ import {
   limit,
   setInlineStyles,
   setTranslate3d,
-  NodeType,
+  updateDistanceBetweenContainers,
 } from '../utils';
-import {closestRect, updateDistanceBetweenContainers} from './utils';
 
 export default class DragLayer {
   helper = null;
@@ -129,24 +130,7 @@ export default class DragLayer {
         y: 0,
       };
 
-      const fields = node.querySelectorAll('input, textarea, select, canvas');
-      const clonedNode = node.cloneNode(true);
-      const clonedFields = [
-        ...clonedNode.querySelectorAll('input, textarea, select, canvas'),
-      ];
-
-      clonedFields.forEach((field, i) => {
-        if (field.type !== 'file' && fields[index]) {
-          field.value = fields[i].value;
-        }
-
-        if (field.tagName === NodeType.Canvas) {
-          const destCtx = field.getContext('2d');
-          destCtx.drawImage(fields[i], 0, 0);
-        }
-      });
-
-      this.helper = parent.appendChild(clonedNode);
+      this.helper = parent.appendChild(cloneNode(node));
 
       setInlineStyles(this.helper, {
         boxSizing: 'border-box',

@@ -5,12 +5,12 @@ import invariant from 'invariant';
 import findIndex from 'lodash/findIndex';
 import isPlainObject from 'lodash/isPlainObject';
 import DragLayer from '../DragLayer';
-import {closestRect} from '../DragLayer/utils';
 import Manager from '../Manager';
 import {isSortableHandle} from '../SortableHandle';
 
 import {
   closest,
+  closestRect,
   events,
   getScrollingParent,
   getEdgeOffset,
@@ -23,6 +23,7 @@ import {
   setTransitionDuration,
   setTranslate3d,
 } from '../utils';
+
 import AutoScroller from '../AutoScroller';
 import {defaultProps, omittedProps, propTypes, validateProps} from './props';
 
@@ -277,6 +278,7 @@ export default function sortableContainer(
           }
         }
 
+        // Need to get the latest value for `index` in case it changes during `updateBeforeSortStart`
         const {index} = node.sortableInfo;
         this.index = index;
         this.newIndex = index;

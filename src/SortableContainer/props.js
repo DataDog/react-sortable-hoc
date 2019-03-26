@@ -45,7 +45,7 @@ export const propTypes = {
 };
 
 export const defaultProps = {
-  animateNodes: true,
+  animateNodes: true, // DD prop
   axis: 'y',
   disableAutoscroll: false,
   distance: 0,

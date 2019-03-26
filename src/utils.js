@@ -163,6 +163,43 @@ export function getEdgeOffset(node, parent, offset = {left: 0, top: 0}) {
   return getEdgeOffset(node.parentNode, parent, nodeOffset);
 }
 
+function getLockPixelOffset({lockOffset, width, height}) {
+  let offsetX = lockOffset;
+  let offsetY = lockOffset;
+  let unit = 'px';
+
+  if (typeof lockOffset === 'string') {
+    const match = /^[+-]?\d*(?:\.\d*)?(px|%)$/.exec(lockOffset);
+
+    invariant(
+      match !== null,
+      'lockOffset value should be a number or a string of a ' +
+        'number followed by "px" or "%". Given %s',
+      lockOffset,
+    );
+
+    offsetX = parseFloat(lockOffset);
+    offsetY = parseFloat(lockOffset);
+    unit = match[1];
+  }
+
+  invariant(
+    isFinite(offsetX) && isFinite(offsetY),
+    'lockOffset value should be a finite. Given %s',
+    lockOffset,
+  );
+
+  if (unit === '%') {
+    offsetX = (offsetX * width) / 100;
+    offsetY = (offsetY * height) / 100;
+  }
+
+  return {
+    x: offsetX,
+    y: offsetY,
+  };
+}
+
 export function getLockPixelOffsets({height, width, lockOffset}) {
   const offsets = Array.isArray(lockOffset)
     ? lockOffset
@@ -238,3 +275,57 @@ export function cloneNode(node) {
 
   return clonedNode;
 }
+
+// -- DD Methods for drag layer
+
+export function distanceRect(x, y, rect) {
+  // Take account of scroll
+  const pageXOffset = window.pageXOffset;
+  const pageYOffset = window.pageYOffset;
+
+  const left = rect.left + pageXOffset;
+  const right = rect.right + pageXOffset;
+  const top = rect.top + pageYOffset;
+  const bottom = rect.bottom + pageYOffset;
+  const dx = x - limit(left, right, x);
+  const dy = y - limit(top, bottom, y);
+  return Math.sqrt(dx * dx + dy * dy);
+}
+
+export function closestRect(x, y, containers) {
+  const distances = containers.map((container) =>
+    distanceRect(x, y, container.getBoundingClientRect()),
+  );
+  return distances.indexOf(Math.min(...distances));
+}
+
+export function getDelta(rect1, rect2) {
+  return {
+    x: rect1.left - rect2.left,
+    y: rect1.top - rect2.top,
+  };
+}
+
+export function updateDistanceBetweenContainers(
+  distance,
+  container1,
+  container2,
+) {
+  const {x, y} = distance;
+  const delta = getDelta(
+    ...[container1, container2].map((cont) =>
+      cont.container.getBoundingClientRect(),
+    ),
+  );
+  const scrollDX =
+    container2.scrollContainer.scrollLeft -
+    container1.scrollContainer.scrollLeft;
+  const scrollDY =
+    container2.scrollContainer.scrollTop - container1.scrollContainer.scrollTop;
+  return {
+    x: x + delta.x + scrollDX,
+    y: y + delta.y + scrollDY,
+  };
+}
+
+// -- DD end
