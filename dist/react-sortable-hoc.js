@@ -464,19 +464,16 @@ var DragLayer = (function() {
             clonedNode.querySelectorAll('input, textarea, select, canvas'),
           );
 
-          if (fields[index]) {
-            clonedFields.forEach(function(field, i) {
-              if (field.type !== 'file') {
-                field.value = fields[i].value;
-              }
+          clonedFields.forEach(function(field, i) {
+            if (field.type !== 'file' && fields[index]) {
+              field.value = fields[i].value;
+            }
 
-              if (field.tagName === NodeType.Canvas) {
-                var destCtx = field.getContext('2d');
-                destCtx.drawImage(fields[i], 0, 0);
-              }
-            });
-          }
-
+            if (field.tagName === NodeType.Canvas) {
+              var destCtx = field.getContext('2d');
+              destCtx.drawImage(fields[i], 0, 0);
+            }
+          });
           this.helper = parent.appendChild(clonedNode);
           setInlineStyles(this.helper, {
             boxSizing: 'border-box',
