@@ -5,12 +5,14 @@ import defaultGetHelperDimensions from './defaultGetHelperDimensions';
 import defaultShouldCancelStart from './defaultShouldCancelStart';
 
 export const propTypes = {
-  animateNodes: PropTypes.bool, // DD prop
+  // DD prop
+  animateNodes: PropTypes.bool,
   axis: PropTypes.oneOf(['x', 'y', 'xy']),
   contentWindow: PropTypes.any,
   disableAutoscroll: PropTypes.bool,
   distance: PropTypes.number,
-  dragLayer: PropTypes.object, // DD prop
+  // DD prop
+  dragLayer: PropTypes.object,
   getContainer: PropTypes.func,
   getHelperDimensions: PropTypes.func,
   helperClass: PropTypes.string,
@@ -30,7 +32,8 @@ export const propTypes = {
     ),
   ]),
   lockToContainerEdges: PropTypes.bool,
-  onDragEnd: PropTypes.func, // DD prop
+  // DD prop
+  onDragEnd: PropTypes.func,
   onSortEnd: PropTypes.func,
   onSortMove: PropTypes.func,
   onSortOver: PropTypes.func,
@@ -45,7 +48,8 @@ export const propTypes = {
 };
 
 export const defaultProps = {
-  animateNodes: true, // DD prop
+  // DD prop
+  animateNodes: true,
   axis: 'y',
   disableAutoscroll: false,
   distance: 0,
