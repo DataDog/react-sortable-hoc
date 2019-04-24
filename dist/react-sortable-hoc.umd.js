@@ -24,7 +24,9 @@
       : PropTypes;
 
   var commonjsGlobal =
-    typeof window !== 'undefined'
+    typeof globalThis !== 'undefined'
+      ? globalThis
+      : typeof window !== 'undefined'
       ? window
       : typeof global !== 'undefined'
       ? global
@@ -3964,7 +3966,11 @@
         field.name = '__sortableClone__'.concat(field.name);
       }
 
-      if (field.tagName === NodeType.Canvas) {
+      if (
+        field.tagName === NodeType.Canvas &&
+        fields[i].width > 0 &&
+        fields[i].height > 0
+      ) {
         var destCtx = field.getContext('2d');
         destCtx.drawImage(fields[i], 0, 0);
       }
@@ -4711,7 +4717,7 @@
           );
 
           defineProperty(
-            assertThisInitialized(assertThisInitialized(_this)),
+            assertThisInitialized(_this),
             'checkActiveIndex',
             function(nextProps) {
               var _ref = nextProps || _this.props,
@@ -4735,277 +4741,260 @@
             },
           );
 
-          defineProperty(
-            assertThisInitialized(assertThisInitialized(_this)),
-            'handleStart',
-            function(event) {
-              var _this$props = _this.props,
-                distance = _this$props.distance,
-                shouldCancelStart = _this$props.shouldCancelStart,
-                items = _this$props.items;
+          defineProperty(assertThisInitialized(_this), 'handleStart', function(
+            event,
+          ) {
+            var _this$props = _this.props,
+              distance = _this$props.distance,
+              shouldCancelStart = _this$props.shouldCancelStart,
+              items = _this$props.items;
 
-              if (event.button === 2 || shouldCancelStart(event)) {
+            if (event.button === 2 || shouldCancelStart(event)) {
+              return;
+            }
+
+            _this.touched = true;
+            _this.position = getPosition(event);
+            var node = closest(event.target, function(el) {
+              return el.sortableInfo != null;
+            });
+
+            if (
+              node &&
+              node.sortableInfo &&
+              _this.nodeIsChild(node) &&
+              !_this.state.sorting
+            ) {
+              var useDragHandle = _this.props.useDragHandle;
+              var _node$sortableInfo = node.sortableInfo,
+                index = _node$sortableInfo.index,
+                collection = _node$sortableInfo.collection,
+                disabled = _node$sortableInfo.disabled;
+
+              if (disabled) {
                 return;
               }
 
-              _this.touched = true;
-              _this.position = getPosition(event);
-              var node = closest(event.target, function(el) {
-                return el.sortableInfo != null;
-              });
-
-              if (
-                node &&
-                node.sortableInfo &&
-                _this.nodeIsChild(node) &&
-                !_this.state.sorting
-              ) {
-                var useDragHandle = _this.props.useDragHandle;
-                var _node$sortableInfo = node.sortableInfo,
-                  index = _node$sortableInfo.index,
-                  collection = _node$sortableInfo.collection,
-                  disabled = _node$sortableInfo.disabled;
-
-                if (disabled) {
-                  return;
-                }
-
-                if (useDragHandle && !closest(event.target, isSortableHandle)) {
-                  return;
-                }
-
-                _this.manager.active = {
-                  collection: collection,
-                  index: index,
-                  item: items[index],
-                };
-
-                if (
-                  !isTouchEvent(event) &&
-                  event.target.tagName === NodeType.Anchor
-                ) {
-                  event.preventDefault();
-                }
-
-                if (!distance) {
-                  if (_this.props.pressDelay === 0) {
-                    _this.handlePress(event);
-                  } else {
-                    _this.pressTimer = setTimeout(function() {
-                      return _this.handlePress(event);
-                    }, _this.props.pressDelay);
-                  }
-                }
+              if (useDragHandle && !closest(event.target, isSortableHandle)) {
+                return;
               }
-            },
-          );
 
-          defineProperty(
-            assertThisInitialized(assertThisInitialized(_this)),
-            'nodeIsChild',
-            function(node) {
-              return node.sortableInfo.manager === _this.manager;
-            },
-          );
-
-          defineProperty(
-            assertThisInitialized(assertThisInitialized(_this)),
-            'handleMove',
-            function(event) {
-              var _this$props2 = _this.props,
-                distance = _this$props2.distance,
-                pressThreshold = _this$props2.pressThreshold;
+              _this.manager.active = {
+                collection: collection,
+                index: index,
+                item: items[index],
+              };
 
               if (
-                !_this.state.sorting &&
-                _this.touched &&
-                !_this._awaitingUpdateBeforeSortStart
+                !isTouchEvent(event) &&
+                event.target.tagName === NodeType.Anchor
               ) {
-                var position = getPosition(event);
-                var delta = {
-                  x: _this.position.x - position.x,
-                  y: _this.position.y - position.y,
-                };
-                var combinedDelta = Math.abs(delta.x) + Math.abs(delta.y);
-                _this.delta = delta;
+                event.preventDefault();
+              }
 
-                if (
-                  !distance &&
-                  (!pressThreshold || combinedDelta >= pressThreshold)
-                ) {
-                  clearTimeout(_this.cancelTimer);
-                  _this.cancelTimer = setTimeout(_this.cancel, 0);
-                } else if (
-                  distance &&
-                  combinedDelta >= distance &&
-                  _this.manager.isActive()
-                ) {
+              if (!distance) {
+                if (_this.props.pressDelay === 0) {
                   _this.handlePress(event);
-                }
-              }
-            },
-          );
-
-          defineProperty(
-            assertThisInitialized(assertThisInitialized(_this)),
-            'handleEnd',
-            function() {
-              _this.touched = false;
-
-              _this.cancel();
-            },
-          );
-
-          defineProperty(
-            assertThisInitialized(assertThisInitialized(_this)),
-            'cancel',
-            function() {
-              var distance = _this.props.distance;
-              var sorting = _this.state.sorting;
-
-              if (!sorting) {
-                if (!distance) {
-                  clearTimeout(_this.pressTimer);
-                }
-
-                _this.manager.active = null;
-              }
-            },
-          );
-
-          defineProperty(
-            assertThisInitialized(assertThisInitialized(_this)),
-            'handlePress',
-            function(event) {
-              try {
-                var active = null;
-
-                if (_this.dragLayer.helper) {
-                  if (_this.manager.active) {
-                    _this.checkActiveIndex();
-
-                    active = _this.manager.getActive();
-                  }
                 } else {
-                  active = _this.dragLayer.startDrag(
-                    _this.helperContainer,
-                    assertThisInitialized(assertThisInitialized(_this)),
-                    event,
-                  );
+                  _this.pressTimer = setTimeout(function() {
+                    return _this.handlePress(event);
+                  }, _this.props.pressDelay);
                 }
+              }
+            }
+          });
 
-                var _temp6 = (function() {
-                  if (active) {
-                    var _temp7 = function _temp7() {
-                      var index = _node.sortableInfo.index;
-                      _this.index = index;
-                      _this.newIndex = index;
-                      _this.axis = {
-                        x: _axis.indexOf('x') >= 0,
-                        y: _axis.indexOf('y') >= 0,
-                      };
-                      _this.initialScroll = {
-                        left: _this.scrollContainer.scrollLeft,
-                        top: _this.scrollContainer.scrollTop,
-                      };
-                      _this.initialWindowScroll = {
-                        left: window.pageXOffset,
-                        top: window.pageYOffset,
-                      };
+          defineProperty(assertThisInitialized(_this), 'nodeIsChild', function(
+            node,
+          ) {
+            return node.sortableInfo.manager === _this.manager;
+          });
 
-                      if (_hideSortableGhost) {
-                        _this.sortableGhost = _node;
-                        setInlineStyles(_node, {
-                          opacity: 0,
-                          visibility: 'hidden',
-                        });
-                      }
+          defineProperty(assertThisInitialized(_this), 'handleMove', function(
+            event,
+          ) {
+            var _this$props2 = _this.props,
+              distance = _this$props2.distance,
+              pressThreshold = _this$props2.pressThreshold;
 
-                      if (_helperClass) {
-                        var _this$dragLayer$helpe;
+            if (
+              !_this.state.sorting &&
+              _this.touched &&
+              !_this._awaitingUpdateBeforeSortStart
+            ) {
+              var position = getPosition(event);
+              var delta = {
+                x: _this.position.x - position.x,
+                y: _this.position.y - position.y,
+              };
+              var combinedDelta = Math.abs(delta.x) + Math.abs(delta.y);
+              _this.delta = delta;
 
-                        (_this$dragLayer$helpe =
-                          _this.dragLayer.helper.classList).add.apply(
-                          _this$dragLayer$helpe,
-                          toConsumableArray(_helperClass.split(' ')),
-                        );
-                      }
+              if (
+                !distance &&
+                (!pressThreshold || combinedDelta >= pressThreshold)
+              ) {
+                clearTimeout(_this.cancelTimer);
+                _this.cancelTimer = setTimeout(_this.cancel, 0);
+              } else if (
+                distance &&
+                combinedDelta >= distance &&
+                _this.manager.isActive()
+              ) {
+                _this.handlePress(event);
+              }
+            }
+          });
 
-                      _this.setState({
-                        sorting: true,
-                        sortingIndex: index,
-                      });
+          defineProperty(assertThisInitialized(_this), 'handleEnd', function() {
+            _this.touched = false;
 
-                      if (_onSortStart) {
-                        _onSortStart(
-                          {
-                            collection: _collection,
-                            index: index,
-                            node: _node,
-                          },
-                          event,
-                        );
-                      }
+            _this.cancel();
+          });
+
+          defineProperty(assertThisInitialized(_this), 'cancel', function() {
+            var distance = _this.props.distance;
+            var sorting = _this.state.sorting;
+
+            if (!sorting) {
+              if (!distance) {
+                clearTimeout(_this.pressTimer);
+              }
+
+              _this.manager.active = null;
+            }
+          });
+
+          defineProperty(assertThisInitialized(_this), 'handlePress', function(
+            event,
+          ) {
+            try {
+              var active = null;
+
+              if (_this.dragLayer.helper) {
+                if (_this.manager.active) {
+                  _this.checkActiveIndex();
+
+                  active = _this.manager.getActive();
+                }
+              } else {
+                active = _this.dragLayer.startDrag(
+                  _this.helperContainer,
+                  assertThisInitialized(_this),
+                  event,
+                );
+              }
+
+              var _temp6 = (function() {
+                if (active) {
+                  var _temp7 = function _temp7() {
+                    var index = _node.sortableInfo.index;
+                    _this.index = index;
+                    _this.newIndex = index;
+                    _this.axis = {
+                      x: _axis.indexOf('x') >= 0,
+                      y: _axis.indexOf('y') >= 0,
+                    };
+                    _this.initialScroll = {
+                      left: _this.scrollContainer.scrollLeft,
+                      top: _this.scrollContainer.scrollTop,
+                    };
+                    _this.initialWindowScroll = {
+                      left: window.pageXOffset,
+                      top: window.pageYOffset,
                     };
 
-                    var _this$props3 = _this.props,
-                      _axis = _this$props3.axis,
-                      _helperClass = _this$props3.helperClass,
-                      _hideSortableGhost = _this$props3.hideSortableGhost,
-                      updateBeforeSortStart =
-                        _this$props3.updateBeforeSortStart,
-                      _onSortStart = _this$props3.onSortStart;
-                    var _active = active,
-                      _node = _active.node,
-                      _collection = _active.collection;
+                    if (_hideSortableGhost) {
+                      _this.sortableGhost = _node;
+                      setInlineStyles(_node, {
+                        opacity: 0,
+                        visibility: 'hidden',
+                      });
+                    }
 
-                    var _temp8 = (function() {
-                      if (typeof updateBeforeSortStart === 'function') {
-                        _this._awaitingUpdateBeforeSortStart = true;
+                    if (_helperClass) {
+                      var _this$dragLayer$helpe;
 
-                        var _temp9 = _finallyRethrows(
-                          function() {
-                            var index = _node.sortableInfo.index;
-                            return Promise.resolve(
-                              updateBeforeSortStart(
-                                {
-                                  collection: _collection,
-                                  index: index,
-                                  node: _node,
-                                },
-                                event,
-                              ),
-                            ).then(function() {});
-                          },
-                          function(_wasThrown, _result) {
-                            _this._awaitingUpdateBeforeSortStart = false;
-                            if (_wasThrown) throw _result;
-                            return _result;
-                          },
-                        );
+                      (_this$dragLayer$helpe =
+                        _this.dragLayer.helper.classList).add.apply(
+                        _this$dragLayer$helpe,
+                        toConsumableArray(_helperClass.split(' ')),
+                      );
+                    }
 
-                        if (_temp9 && _temp9.then)
-                          return _temp9.then(function() {});
-                      }
-                    })();
+                    _this.setState({
+                      sorting: true,
+                      sortingIndex: index,
+                    });
 
-                    return _temp8 && _temp8.then
-                      ? _temp8.then(_temp7)
-                      : _temp7(_temp8);
-                  }
-                })();
+                    if (_onSortStart) {
+                      _onSortStart(
+                        {
+                          collection: _collection,
+                          index: index,
+                          node: _node,
+                        },
+                        event,
+                      );
+                    }
+                  };
 
-                return Promise.resolve(
-                  _temp6 && _temp6.then ? _temp6.then(function() {}) : void 0,
-                );
-              } catch (e) {
-                return Promise.reject(e);
-              }
-            },
-          );
+                  var _this$props3 = _this.props,
+                    _axis = _this$props3.axis,
+                    _helperClass = _this$props3.helperClass,
+                    _hideSortableGhost = _this$props3.hideSortableGhost,
+                    updateBeforeSortStart = _this$props3.updateBeforeSortStart,
+                    _onSortStart = _this$props3.onSortStart;
+                  var _active = active,
+                    _node = _active.node,
+                    _collection = _active.collection;
+
+                  var _temp8 = (function() {
+                    if (typeof updateBeforeSortStart === 'function') {
+                      _this._awaitingUpdateBeforeSortStart = true;
+
+                      var _temp9 = _finallyRethrows(
+                        function() {
+                          var index = _node.sortableInfo.index;
+                          return Promise.resolve(
+                            updateBeforeSortStart(
+                              {
+                                collection: _collection,
+                                index: index,
+                                node: _node,
+                              },
+                              event,
+                            ),
+                          ).then(function() {});
+                        },
+                        function(_wasThrown, _result) {
+                          _this._awaitingUpdateBeforeSortStart = false;
+                          if (_wasThrown) throw _result;
+                          return _result;
+                        },
+                      );
+
+                      if (_temp9 && _temp9.then)
+                        return _temp9.then(function() {});
+                    }
+                  })();
+
+                  return _temp8 && _temp8.then
+                    ? _temp8.then(_temp7)
+                    : _temp7(_temp8);
+                }
+              })();
+
+              return Promise.resolve(
+                _temp6 && _temp6.then ? _temp6.then(function() {}) : void 0,
+              );
+            } catch (e) {
+              return Promise.reject(e);
+            }
+          });
 
           defineProperty(
-            assertThisInitialized(assertThisInitialized(_this)),
+            assertThisInitialized(_this),
             'handleSortMove',
             function(event) {
               var onSortMove = _this.props.onSortMove;
@@ -5032,7 +5021,7 @@
           );
 
           defineProperty(
-            assertThisInitialized(assertThisInitialized(_this)),
+            assertThisInitialized(_this),
             'handleSortEnd',
             function(event) {
               var newList =
@@ -5099,7 +5088,7 @@
           );
 
           defineProperty(
-            assertThisInitialized(assertThisInitialized(_this)),
+            assertThisInitialized(_this),
             'autoscroll',
             function() {
               var disableAutoscroll = _this.props.disableAutoscroll;
@@ -5118,19 +5107,17 @@
             },
           );
 
-          defineProperty(
-            assertThisInitialized(assertThisInitialized(_this)),
-            'onAutoScroll',
-            function(offset) {
-              _this.dragLayer.translate.x += offset.left;
-              _this.dragLayer.translate.y += offset.top;
+          defineProperty(assertThisInitialized(_this), 'onAutoScroll', function(
+            offset,
+          ) {
+            _this.dragLayer.translate.x += offset.left;
+            _this.dragLayer.translate.y += offset.top;
 
-              _this.animateNodes();
-            },
-          );
+            _this.animateNodes();
+          });
 
           defineProperty(
-            assertThisInitialized(assertThisInitialized(_this)),
+            assertThisInitialized(_this),
             '_handleSortMove',
             function(event) {
               if (_this.checkActive(event)) {
@@ -5150,7 +5137,7 @@
           );
 
           defineProperty(
-            assertThisInitialized(assertThisInitialized(_this)),
+            assertThisInitialized(_this),
             'handleSortSwap',
             function(index, item) {
               var onSortSwap = _this.props.onSortSwap;
@@ -5165,7 +5152,7 @@
           );
 
           defineProperty(
-            assertThisInitialized(assertThisInitialized(_this)),
+            assertThisInitialized(_this),
             'getClosestNode',
             function(event) {
               var position = getPosition(event);
@@ -5209,53 +5196,47 @@
             },
           );
 
-          defineProperty(
-            assertThisInitialized(assertThisInitialized(_this)),
-            'checkActive',
-            function(event) {
-              var active = _this.manager.active;
+          defineProperty(assertThisInitialized(_this), 'checkActive', function(
+            event,
+          ) {
+            var active = _this.manager.active;
 
-              if (!active) {
-                var _node3 = closest(event.target, function(el) {
-                  return el.sortableInfo != null;
+            if (!active) {
+              var _node3 = closest(event.target, function(el) {
+                return el.sortableInfo != null;
+              });
+
+              if (_node3 && _node3.sortableInfo) {
+                var pos = getPosition(event);
+                var _collection2 = _node3.sortableInfo.collection;
+
+                var nodes = _this.manager.refs[_collection2].map(function(ref) {
+                  return ref.node;
                 });
 
-                if (_node3 && _node3.sortableInfo) {
-                  var pos = getPosition(event);
-                  var _collection2 = _node3.sortableInfo.collection;
+                if (nodes) {
+                  var index = closestRect(pos.x, pos.y, nodes);
+                  _this.manager.active = {
+                    index: index,
+                    collection: _collection2,
+                    item: _this.props.items[index],
+                  };
 
-                  var nodes = _this.manager.refs[_collection2].map(function(
-                    ref,
-                  ) {
-                    return ref.node;
-                  });
-
-                  if (nodes) {
-                    var index = closestRect(pos.x, pos.y, nodes);
-                    _this.manager.active = {
-                      index: index,
-                      collection: _collection2,
-                      item: _this.props.items[index],
-                    };
-
-                    _this.handlePress(event);
-                  }
+                  _this.handlePress(event);
                 }
-
-                return false;
               }
 
-              return true;
-            },
-          );
+              return false;
+            }
+
+            return true;
+          });
 
           validateProps(props);
           _this.state = {};
           _this.dragLayer = props.dragLayer || new DragLayer();
 
-          _this.dragLayer.addRef(
-            assertThisInitialized(assertThisInitialized(_this)),
-          );
+          _this.dragLayer.addRef(assertThisInitialized(_this));
 
           _this.dragLayer.onDragEnd = props.onDragEnd;
           _this.manager = new Manager();
@@ -5803,14 +5784,14 @@
     );
   }
 
-  exports.SortableContainer = sortableContainer;
-  exports.sortableContainer = sortableContainer;
-  exports.SortableElement = sortableElement;
-  exports.sortableElement = sortableElement;
-  exports.SortableHandle = sortableHandle;
-  exports.sortableHandle = sortableHandle;
-  exports.arrayMove = arrayMove;
   exports.DragLayer = DragLayer;
+  exports.SortableContainer = sortableContainer;
+  exports.SortableElement = sortableElement;
+  exports.SortableHandle = sortableHandle;
+  exports.arrayMove = arrayMove;
+  exports.sortableContainer = sortableContainer;
+  exports.sortableElement = sortableElement;
+  exports.sortableHandle = sortableHandle;
 
   Object.defineProperty(exports, '__esModule', {value: true});
 });
